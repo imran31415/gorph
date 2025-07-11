@@ -1,0 +1,267 @@
+entities:
+  - id: Customer
+    category: USER_FACING
+    description: "External customer using the platform"
+    status: healthy
+    owner: product
+    environment: production
+    tags: [external]
+    attributes:
+      type: human
+    shape: ellipse
+
+  - id: MobileUser
+    category: USER_FACING
+    description: "Mobile app user"
+    status: healthy
+    owner: product
+    environment: production
+    tags: [mobile]
+    attributes:
+      type: human
+    shape: ellipse
+
+  - id: WebApp
+    category: FRONTEND
+    description: "Web frontend interface"
+    status: healthy
+    owner: web-team
+    environment: production
+    tags: [critical]
+    attributes:
+      framework: React
+    deployment_config:
+      replicas: 2
+      image: registry/webapp:v1
+      env:
+        - name: API_URL
+          value: https://api.example.com
+    shape: rectangle
+
+  - id: MobileApp
+    category: FRONTEND
+    description: "Mobile frontend"
+    status: healthy
+    owner: mobile-team
+    environment: production
+    tags: [react-native]
+    attributes:
+      framework: ReactNative
+    shape: rectangle
+
+  - id: LoadBalancer
+    category: NETWORK
+    description: "Routes traffic for web"
+    status: healthy
+    owner: infra
+    environment: production
+    attributes:
+      type: ALB
+
+  - id: API_Gateway
+    category: NETWORK
+    description: "Mobile traffic gateway"
+    status: healthy
+    owner: infra
+    environment: production
+    attributes:
+      type: Kong
+
+  - id: APIServer
+    category: BACKEND
+    description: "Core API service"
+    status: degraded
+    owner: backend-team
+    environment: production
+    tags: [critical]
+    attributes:
+      language: Go
+    deployment_config:
+      replicas: 3
+      image: registry/apiservice:v2.0
+
+  - id: AuthService
+    category: BACKEND
+    description: "User authentication"
+    status: healthy
+    owner: security
+    environment: production
+    attributes:
+      language: Go
+    deployment_config:
+      replicas: 2
+      image: registry/auth:v1.0
+
+  - id: PaymentProcessor
+    category: BACKEND
+    description: "Payment gateway"
+    status: healthy
+    owner: payments
+    environment: production
+    attributes:
+      language: Go
+    deployment_config:
+      replicas: 2
+      image: registry/payments:v1.3
+
+  - id: NotificationService
+    category: BACKEND
+    description: "Notification engine"
+    status: healthy
+    owner: comms
+    environment: production
+    attributes:
+      language: NodeJS
+    deployment_config:
+      replicas: 1
+      image: registry/notifier:v1.1
+
+  - id: MySQL
+    category: DATABASE
+    description: "Primary DB"
+    status: healthy
+    owner: db-team
+    environment: production
+    attributes:
+      engine: MySQL
+      version: "8.0"
+
+  - id: Redis
+    category: DATABASE
+    description: "Cache"
+    status: healthy
+    owner: platform
+    environment: production
+    attributes:
+      engine: Redis
+      version: "7"
+
+  - id: Elasticsearch
+    category: DATABASE
+    description: "Search engine"
+    status: healthy
+    owner: platform
+    environment: production
+    attributes:
+      engine: Elasticsearch
+      version: "7.10"
+
+  - id: Stripe
+    category: INTEGRATION
+    description: "Payment API"
+    status: healthy
+    owner: integrations
+    environment: production
+    tags: [external]
+
+  - id: SendGrid
+    category: INTEGRATION
+    description: "Email API"
+    status: healthy
+    owner: integrations
+    environment: production
+    tags: [external]
+
+  - id: LoggingService
+    category: INTERNAL
+    description: "Log aggregator"
+    status: healthy
+    owner: platform
+    environment: production
+    attributes:
+      tool: FluentBit
+
+  - id: MonitoringService
+    category: INTERNAL
+    description: "System metrics"
+    status: healthy
+    owner: sre
+    environment: production
+    attributes:
+      tool: Prometheus
+
+  - id: Kubernetes
+    category: INFRASTRUCTURE
+    description: "Orchestrator"
+    status: healthy
+    owner: platform
+    environment: production
+    attributes:
+      platform: EKS
+
+  - id: AWS
+    category: INFRASTRUCTURE
+    description: "Cloud provider"
+    status: healthy
+    owner: devops
+    environment: production
+    attributes:
+      region: us-west-2
+
+connections:
+  - from: Customer
+    to: WebApp
+    type: User_Interaction
+  - from: MobileUser
+    to: MobileApp
+    type: User_Interaction
+  - from: WebApp
+    to: LoadBalancer
+    type: HTTP_Request
+  - from: MobileApp
+    to: API_Gateway
+    type: HTTP_Request
+  - from: LoadBalancer
+    to: APIServer
+    type: HTTP_Request
+  - from: API_Gateway
+    to: APIServer
+    type: HTTP_Request
+  - from: APIServer
+    to: AuthService
+    type: Service_Call
+  - from: APIServer
+    to: PaymentProcessor
+    type: Service_Call
+  - from: APIServer
+    to: NotificationService
+    type: Service_Call
+  - from: APIServer
+    to: MySQL
+    type: DB_Connection
+  - from: AuthService
+    to: Redis
+    type: DB_Connection
+  - from: PaymentProcessor
+    to: MySQL
+    type: DB_Connection
+  - from: NotificationService
+    to: Elasticsearch
+    type: DB_Connection
+  - from: PaymentProcessor
+    to: Stripe
+    type: API_Call
+  - from: NotificationService
+    to: SendGrid
+    type: API_Call
+  - from: LoggingService
+    to: APIServer
+    type: Internal_API
+  - from: MonitoringService
+    to: APIServer
+    type: Internal_API
+  - from: MonitoringService
+    to: MySQL
+    type: Internal_API
+  - from: Kubernetes
+    to: APIServer
+    type: Deploys
+  - from: Kubernetes
+    to: AuthService
+    type: Deploys
+  - from: Kubernetes
+    to: PaymentProcessor
+    type: Deploys
+  - from: AWS
+    to: Kubernetes
+    type: Hosts

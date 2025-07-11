@@ -1,0 +1,183 @@
+digraph Infrastructure {
+  rankdir=LR;
+  node [shape=plaintext, fontname=Helvetica];
+  subgraph cluster_INTERNAL {
+    label="Internal";
+    LoggingService [tooltip="LoggingService: Log aggregator\nStatus: healthy\nOwner: platform\nEnvironment: production\nTags: []\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>LoggingService</B></TD></TR>
+        <TR><TD>Log aggregator</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    MonitoringService [tooltip="MonitoringService: System metrics\nStatus: healthy\nOwner: sre\nEnvironment: production\nTags: []\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MonitoringService</B></TD></TR>
+        <TR><TD>System metrics</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INFRASTRUCTURE {
+    label="Infrastructure";
+    Kubernetes [tooltip="Kubernetes: Orchestrator\nStatus: healthy\nOwner: platform\nEnvironment: production\nTags: []\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Kubernetes</B></TD></TR>
+        <TR><TD>Orchestrator</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    AWS [tooltip="AWS: Cloud provider\nStatus: healthy\nOwner: devops\nEnvironment: production\nTags: []\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>AWS</B></TD></TR>
+        <TR><TD>Cloud provider</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_USER_FACING {
+    label="User_facing";
+    Customer [tooltip="Customer: External customer using the platform\nStatus: healthy\nOwner: product\nEnvironment: production\nTags: [external]\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Customer</B></TD></TR>
+        <TR><TD>External customer using ...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    MobileUser [tooltip="MobileUser: Mobile app user\nStatus: healthy\nOwner: product\nEnvironment: production\nTags: [mobile]\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MobileUser</B></TD></TR>
+        <TR><TD>Mobile app user</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_FRONTEND {
+    label="Frontend";
+    WebApp [tooltip="WebApp: Web frontend interface\nStatus: healthy\nOwner: web-team\nEnvironment: production\nTags: [critical]\nDeployment:\nenv:\n    - name: API_URL\n      value: https://api.example.com\nimage: registry/webapp:v1\nreplicas: 2\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>WebApp</B></TD></TR>
+        <TR><TD>Web frontend interface</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    MobileApp [tooltip="MobileApp: Mobile frontend\nStatus: healthy\nOwner: mobile-team\nEnvironment: production\nTags: [react-native]\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MobileApp</B></TD></TR>
+        <TR><TD>Mobile frontend</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_NETWORK {
+    label="Network";
+    LoadBalancer [tooltip="LoadBalancer: Routes traffic for web\nStatus: healthy\nOwner: infra\nEnvironment: production\nTags: []\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>LoadBalancer</B></TD></TR>
+        <TR><TD>Routes traffic for web</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    API_Gateway [tooltip="API_Gateway: Mobile traffic gateway\nStatus: healthy\nOwner: infra\nEnvironment: production\nTags: []\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>API_Gateway</B></TD></TR>
+        <TR><TD>Mobile traffic gateway</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_BACKEND {
+    label="Backend";
+    APIServer [tooltip="APIServer: Core API service\nStatus: degraded\nOwner: backend-team\nEnvironment: production\nTags: [critical]\nDeployment:\nimage: registry/apiservice:v2.0\nreplicas: 3\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>APIServer</B></TD></TR>
+        <TR><TD>Core API service</TD></TR>
+        <TR><TD BGCOLOR="yellow" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    AuthService [tooltip="AuthService: User authentication\nStatus: healthy\nOwner: security\nEnvironment: production\nTags: []\nDeployment:\nimage: registry/auth:v1.0\nreplicas: 2\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>AuthService</B></TD></TR>
+        <TR><TD>User authentication</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    PaymentProcessor [tooltip="PaymentProcessor: Payment gateway\nStatus: healthy\nOwner: payments\nEnvironment: production\nTags: []\nDeployment:\nimage: registry/payments:v1.3\nreplicas: 2\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>PaymentProcessor</B></TD></TR>
+        <TR><TD>Payment gateway</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    NotificationService [tooltip="NotificationService: Notification engine\nStatus: healthy\nOwner: comms\nEnvironment: production\nTags: []\nDeployment:\nimage: registry/notifier:v1.1\nreplicas: 1\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>NotificationService</B></TD></TR>
+        <TR><TD>Notification engine</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_DATABASE {
+    label="Database";
+    MySQL [tooltip="MySQL: Primary DB\nStatus: healthy\nOwner: db-team\nEnvironment: production\nTags: []\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MySQL</B></TD></TR>
+        <TR><TD>Primary DB</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    Redis [tooltip="Redis: Cache\nStatus: healthy\nOwner: platform\nEnvironment: production\nTags: []\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Redis</B></TD></TR>
+        <TR><TD>Cache</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    Elasticsearch [tooltip="Elasticsearch: Search engine\nStatus: healthy\nOwner: platform\nEnvironment: production\nTags: []\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Elasticsearch</B></TD></TR>
+        <TR><TD>Search engine</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INTEGRATION {
+    label="Integration";
+    Stripe [tooltip="Stripe: Payment API\nStatus: healthy\nOwner: integrations\nEnvironment: production\nTags: [external]\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Stripe</B></TD></TR>
+        <TR><TD>Payment API</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    SendGrid [tooltip="SendGrid: Email API\nStatus: healthy\nOwner: integrations\nEnvironment: production\nTags: [external]\nDeployment:\n\{\}\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>SendGrid</B></TD></TR>
+        <TR><TD>Email API</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  Customer -> WebApp [label="User_Interaction"];
+  MobileUser -> MobileApp [label="User_Interaction"];
+  WebApp -> LoadBalancer [label="HTTP_Request"];
+  MobileApp -> API_Gateway [label="HTTP_Request"];
+  LoadBalancer -> APIServer [label="HTTP_Request"];
+  API_Gateway -> APIServer [label="HTTP_Request"];
+  APIServer -> AuthService [label="Service_Call"];
+  APIServer -> PaymentProcessor [label="Service_Call"];
+  APIServer -> NotificationService [label="Service_Call"];
+  APIServer -> MySQL [label="DB_Connection", color=blue];
+  AuthService -> Redis [label="DB_Connection", color=blue];
+  PaymentProcessor -> MySQL [label="DB_Connection", color=blue];
+  NotificationService -> Elasticsearch [label="DB_Connection", color=blue];
+  PaymentProcessor -> Stripe [label="API_Call", style=dashed, color=orange];
+  NotificationService -> SendGrid [label="API_Call", style=dashed, color=orange];
+  LoggingService -> APIServer [label="Internal_API", style=dotted, color=gray];
+  MonitoringService -> APIServer [label="Internal_API", style=dotted, color=gray];
+  MonitoringService -> MySQL [label="Internal_API", style=dotted, color=gray];
+  Kubernetes -> APIServer [label="Deploys"];
+  Kubernetes -> AuthService [label="Deploys"];
+  Kubernetes -> PaymentProcessor [label="Deploys"];
+  AWS -> Kubernetes [label="Hosts"];
+}
