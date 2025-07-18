@@ -1,0 +1,386 @@
+syntax = "proto3";
+
+package gorph.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "gorph/v2/api/v1;gorph";
+
+// Entity represents an infrastructure component
+message Entity {
+  // Unique identifier for the entity
+  string id = 1;
+  
+  // Category classification
+  Category category = 2;
+  
+  // Human-readable description
+  string description = 3;
+  
+  // Current operational status
+  Status status = 4;
+  
+  // Team or person responsible
+  string owner = 5;
+  
+  // Deployment environment
+  string environment = 6;
+  
+  // Optional tags for grouping/filtering
+  repeated string tags = 7;
+  
+  // Key-value attributes (framework, language, tool, etc.)
+  map<string, string> attributes = 8;
+  
+  // Deployment configuration (replicas, image, env vars, etc.)
+  google.protobuf.Struct deployment_config = 9;
+  
+  // Visual shape for rendering
+  string shape = 10;
+  
+  // Icon identifier
+  string icon = 11;
+  
+  // Metadata
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// Connection represents a relationship between entities
+message Connection {
+  // Source entity ID
+  string from = 1;
+  
+  // Target entity ID
+  string to = 2;
+  
+  // Type of connection
+  ConnectionType type = 3;
+  
+  // Optional connection attributes
+  map<string, string> attributes = 4;
+  
+  // Metadata
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// Infrastructure represents a complete system architecture
+message Infrastructure {
+  // Unique identifier
+  string id = 1;
+  
+  // Human-readable name
+  string name = 2;
+  
+  // Description of the infrastructure
+  string description = 3;
+  
+  // All entities in the infrastructure
+  repeated Entity entities = 4;
+  
+  // All connections between entities
+  repeated Connection connections = 5;
+  
+  // Version for optimistic locking
+  int64 version = 6;
+  
+  // Metadata
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// Entity categories
+enum Category {
+  CATEGORY_UNSPECIFIED = 0;
+  CATEGORY_USER_FACING = 1;
+  CATEGORY_FRONTEND = 2;
+  CATEGORY_BACKEND = 3;
+  CATEGORY_DATABASE = 4;
+  CATEGORY_NETWORK = 5;
+  CATEGORY_INTEGRATION = 6;
+  CATEGORY_INFRASTRUCTURE = 7;
+  CATEGORY_INTERNAL = 8;
+  CATEGORY_CI = 9;
+  CATEGORY_REGISTRY = 10;
+  CATEGORY_CONFIG = 11;
+  CATEGORY_CD = 12;
+  CATEGORY_ENVIRONMENT = 13;
+  CATEGORY_SCM = 14;
+}
+
+// Status values
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_HEALTHY = 1;
+  STATUS_DEGRADED = 2;
+  STATUS_DOWN = 3;
+  STATUS_UNKNOWN = 4;
+}
+
+// Connection types
+enum ConnectionType {
+  CONNECTION_TYPE_UNSPECIFIED = 0;
+  CONNECTION_TYPE_HTTP_REQUEST = 1;
+  CONNECTION_TYPE_API_CALL = 2;
+  CONNECTION_TYPE_DB_CONNECTION = 3;
+  CONNECTION_TYPE_SERVICE_CALL = 4;
+  CONNECTION_TYPE_USER_INTERACTION = 5;
+  CONNECTION_TYPE_INTERNAL_API = 6;
+  CONNECTION_TYPE_DEPLOYS = 7;
+  CONNECTION_TYPE_HOSTS = 8;
+  CONNECTION_TYPE_TRIGGERS_BUILD = 9;
+  CONNECTION_TYPE_PUSHES_IMAGE = 10;
+  CONNECTION_TYPE_UPDATES_CONFIG = 11;
+  CONNECTION_TYPE_WATCHES_CONFIG = 12;
+  CONNECTION_TYPE_DEPLOYS_TO = 13;
+}
+
+// Output formats for diagram generation
+enum OutputFormat {
+  OUTPUT_FORMAT_UNSPECIFIED = 0;
+  OUTPUT_FORMAT_DOT = 1;
+  OUTPUT_FORMAT_PNG = 2;
+  OUTPUT_FORMAT_SVG = 3;
+  OUTPUT_FORMAT_PDF = 4;
+}
+
+// === Request/Response Messages ===
+
+// Entity operations
+message CreateEntityRequest {
+  string infrastructure_id = 1;
+  Entity entity = 2;
+}
+
+message CreateEntityResponse {
+  Entity entity = 1;
+}
+
+message GetEntityRequest {
+  string infrastructure_id = 1;
+  string entity_id = 2;
+}
+
+message GetEntityResponse {
+  Entity entity = 1;
+}
+
+message UpdateEntityRequest {
+  string infrastructure_id = 1;
+  Entity entity = 2;
+  // Field mask for partial updates
+  repeated string update_mask = 3;
+}
+
+message UpdateEntityResponse {
+  Entity entity = 1;
+}
+
+message DeleteEntityRequest {
+  string infrastructure_id = 1;
+  string entity_id = 2;
+}
+
+message DeleteEntityResponse {}
+
+message ListEntitiesRequest {
+  string infrastructure_id = 1;
+  // Optional filtering
+  Category category = 2;
+  Status status = 3;
+  string owner = 4;
+  repeated string tags = 5;
+  // Pagination
+  int32 page_size = 6;
+  string page_token = 7;
+}
+
+message ListEntitiesResponse {
+  repeated Entity entities = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+// Connection operations
+message CreateConnectionRequest {
+  string infrastructure_id = 1;
+  Connection connection = 2;
+}
+
+message CreateConnectionResponse {
+  Connection connection = 1;
+}
+
+message GetConnectionRequest {
+  string infrastructure_id = 1;
+  string from = 2;
+  string to = 3;
+}
+
+message GetConnectionResponse {
+  Connection connection = 1;
+}
+
+message UpdateConnectionRequest {
+  string infrastructure_id = 1;
+  Connection connection = 2;
+  repeated string update_mask = 3;
+}
+
+message UpdateConnectionResponse {
+  Connection connection = 1;
+}
+
+message DeleteConnectionRequest {
+  string infrastructure_id = 1;
+  string from = 2;
+  string to = 3;
+}
+
+message DeleteConnectionResponse {}
+
+message ListConnectionsRequest {
+  string infrastructure_id = 1;
+  // Optional filtering
+  string from = 2;
+  string to = 3;
+  ConnectionType type = 4;
+  // Pagination
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListConnectionsResponse {
+  repeated Connection connections = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+// Infrastructure operations
+message CreateInfrastructureRequest {
+  Infrastructure infrastructure = 1;
+}
+
+message CreateInfrastructureResponse {
+  Infrastructure infrastructure = 1;
+}
+
+message GetInfrastructureRequest {
+  string infrastructure_id = 1;
+}
+
+message GetInfrastructureResponse {
+  Infrastructure infrastructure = 1;
+}
+
+message UpdateInfrastructureRequest {
+  Infrastructure infrastructure = 1;
+  repeated string update_mask = 2;
+}
+
+message UpdateInfrastructureResponse {
+  Infrastructure infrastructure = 1;
+}
+
+message DeleteInfrastructureRequest {
+  string infrastructure_id = 1;
+}
+
+message DeleteInfrastructureResponse {}
+
+message ListInfrastructuresRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListInfrastructuresResponse {
+  repeated Infrastructure infrastructures = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+// Diagram generation
+message GenerateDiagramRequest {
+  string infrastructure_id = 1;
+  OutputFormat format = 2;
+  // Optional style configuration override
+  string style_config = 3;
+}
+
+message GenerateDiagramResponse {
+  bytes content = 1;
+  string content_type = 2;
+  int64 size_bytes = 3;
+}
+
+// Import from YAML
+message ImportYAMLRequest {
+  string yaml_content = 1;
+  string infrastructure_id = 2; // Optional, creates new if empty
+}
+
+message ImportYAMLResponse {
+  Infrastructure infrastructure = 1;
+}
+
+// Export to YAML
+message ExportYAMLRequest {
+  string infrastructure_id = 1;
+}
+
+message ExportYAMLResponse {
+  string yaml_content = 1;
+}
+
+// Validation
+message ValidateInfrastructureRequest {
+  Infrastructure infrastructure = 1;
+}
+
+message ValidateInfrastructureResponse {
+  bool valid = 1;
+  repeated ValidationError errors = 2;
+}
+
+message ValidationError {
+  string field = 1;
+  string message = 2;
+  string entity_id = 3; // If error is entity-specific
+}
+
+// === Service Definition ===
+
+service GorphService {
+  // Entity management
+  rpc CreateEntity(CreateEntityRequest) returns (CreateEntityResponse);
+  rpc GetEntity(GetEntityRequest) returns (GetEntityResponse);
+  rpc UpdateEntity(UpdateEntityRequest) returns (UpdateEntityResponse);
+  rpc DeleteEntity(DeleteEntityRequest) returns (DeleteEntityResponse);
+  rpc ListEntities(ListEntitiesRequest) returns (ListEntitiesResponse);
+  
+  // Connection management
+  rpc CreateConnection(CreateConnectionRequest) returns (CreateConnectionResponse);
+  rpc GetConnection(GetConnectionRequest) returns (GetConnectionResponse);
+  rpc UpdateConnection(UpdateConnectionRequest) returns (UpdateConnectionResponse);
+  rpc DeleteConnection(DeleteConnectionRequest) returns (DeleteConnectionResponse);
+  rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse);
+  
+  // Infrastructure management
+  rpc CreateInfrastructure(CreateInfrastructureRequest) returns (CreateInfrastructureResponse);
+  rpc GetInfrastructure(GetInfrastructureRequest) returns (GetInfrastructureResponse);
+  rpc UpdateInfrastructure(UpdateInfrastructureRequest) returns (UpdateInfrastructureResponse);
+  rpc DeleteInfrastructure(DeleteInfrastructureRequest) returns (DeleteInfrastructureResponse);
+  rpc ListInfrastructures(ListInfrastructuresRequest) returns (ListInfrastructuresResponse);
+  
+  // Diagram operations
+  rpc GenerateDiagram(GenerateDiagramRequest) returns (GenerateDiagramResponse);
+  
+  // Import/Export
+  rpc ImportYAML(ImportYAMLRequest) returns (ImportYAMLResponse);
+  rpc ExportYAML(ExportYAMLRequest) returns (ExportYAMLResponse);
+  
+  // Validation
+  rpc ValidateInfrastructure(ValidateInfrastructureRequest) returns (ValidateInfrastructureResponse);
+} 

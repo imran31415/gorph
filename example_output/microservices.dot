@@ -1,0 +1,111 @@
+digraph Infrastructure {
+  rankdir=LR;
+  node [shape=plaintext, fontname=Helvetica];
+  subgraph cluster_INTEGRATION {
+    label="Integration";
+    PaymentGateway [tooltip="PaymentGateway: External payment processor\nStatus: healthy\nOwner: integrations\nEnvironment: production\nTags: [external]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>PaymentGateway</B></TD></TR>
+        <TR><TD>External payment process...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    EmailProvider [tooltip="EmailProvider: SendGrid email service\nStatus: healthy\nOwner: integrations\nEnvironment: production\nTags: [external]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>EmailProvider</B></TD></TR>
+        <TR><TD>SendGrid email service</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_USER_FACING {
+    label="User Facing";
+    MobileApp [tooltip="MobileApp: Mobile client application\nStatus: healthy\nOwner: mobile-team\nEnvironment: production\nTags: [critical]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MobileApp</B></TD></TR>
+        <TR><TD>Mobile client applicatio...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_NETWORK {
+    label="Network";
+    APIGateway [tooltip="APIGateway: Entry point for all services\nStatus: healthy\nOwner: platform-team\nEnvironment: production\nDeployment:\nimage: kong:2.8\nreplicas: 3\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>APIGateway</B></TD></TR>
+        <TR><TD>Entry point for all serv...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_BACKEND {
+    label="Backend";
+    UserService [tooltip="UserService: User management microservice\nStatus: healthy\nOwner: user-team\nEnvironment: production\nDeployment:\nimage: user-service:v1.5.0\nreplicas: 2\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>UserService</B></TD></TR>
+        <TR><TD>User management microser...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    OrderService [tooltip="OrderService: Order processing service\nStatus: degraded\nOwner: order-team\nEnvironment: production\nDeployment:\nimage: order-service:v2.1.0\nreplicas: 4\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>OrderService</B></TD></TR>
+        <TR><TD>Order processing service</TD></TR>
+        <TR><TD BGCOLOR="yellow" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    PaymentService [tooltip="PaymentService: Payment processing service\nStatus: down\nOwner: payment-team\nEnvironment: production\nTags: [critical]\nDeployment:\nimage: payment-service:v1.8.0\nreplicas: 3\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>PaymentService</B></TD></TR>
+        <TR><TD>Payment processing servi...</TD></TR>
+        <TR><TD BGCOLOR="red" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    NotificationService [tooltip="NotificationService: Email and push notifications\nStatus: healthy\nOwner: comms-team\nEnvironment: production\nDeployment:\nimage: notification-service:v1.2.0\nreplicas: 2\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>NotificationService</B></TD></TR>
+        <TR><TD>Email and push notificat...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_DATABASE {
+    label="Database";
+    UserDB [tooltip="UserDB: User data PostgreSQL\nStatus: healthy\nOwner: user-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>UserDB</B></TD></TR>
+        <TR><TD>User data PostgreSQL</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    OrderDB [tooltip="OrderDB: Order data MongoDB\nStatus: healthy\nOwner: order-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>OrderDB</B></TD></TR>
+        <TR><TD>Order data MongoDB</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INFRASTRUCTURE {
+    label="Infrastructure";
+    MessageQueue [tooltip="MessageQueue: RabbitMQ message broker\nStatus: healthy\nOwner: platform-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MessageQueue</B></TD></TR>
+        <TR><TD>RabbitMQ message broker</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  MobileApp -> APIGateway [label="HTTP_Request", color=black];
+  APIGateway -> UserService [label="Service_Call", color=black];
+  APIGateway -> OrderService [label="Service_Call", color=black];
+  APIGateway -> PaymentService [label="Service_Call", color=black];
+  UserService -> UserDB [label="DB_Connection", color=blue];
+  OrderService -> OrderDB [label="DB_Connection", color=blue];
+  OrderService -> MessageQueue [label="Service_Call", color=black];
+  PaymentService -> PaymentGateway [label="API_Call", color=orange, style=dashed];
+  PaymentService -> MessageQueue [label="Service_Call", color=black];
+  NotificationService -> MessageQueue [label="Service_Call", color=black];
+  NotificationService -> EmailProvider [label="API_Call", color=orange, style=dashed];
+  MessageQueue -> NotificationService [label="Service_Call", color=black];
+}

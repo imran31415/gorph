@@ -1,0 +1,109 @@
+# Gorph Styling Configuration
+# This file contains all visual styling and formatting rules
+
+# DOT graph settings
+graph:
+  direction: "LR"  # Layout direction: LR (left-to-right), TB (top-to-bottom), etc.
+  font_family: "Helvetica"
+  node_shape: "plaintext"
+
+# Status color mappings
+status_colors:
+  healthy: "green"
+  degraded: "yellow" 
+  down: "red"
+  unknown: "lightgray"
+
+# Connection type styling
+connection_styles:
+  API_Call:
+    style: "dashed"
+    color: "orange"
+  Internal_API:
+    style: "dotted"
+    color: "gray"
+  DB_Connection:
+    color: "blue"
+  Service_Call:
+    color: "black"
+  HTTP_Request:
+    color: "black"
+  User_Interaction:
+    color: "purple"
+    style: "bold"
+  Triggers_Build:
+    color: "darkgreen"
+  Pushes_Image:
+    color: "blue"
+  Updates_Config:
+    color: "orange"
+  Watches_Config:
+    color: "red"
+  Deploys_To:
+    color: "purple"
+  Deploys:
+    color: "purple"
+  Hosts:
+    color: "brown"
+
+# Category display names and styling
+categories:
+  USER_FACING:
+    display_name: "User Facing"
+    cluster_style: ""
+  FRONTEND:
+    display_name: "Frontend"
+    cluster_style: ""
+  BACKEND:
+    display_name: "Backend" 
+    cluster_style: ""
+  DATABASE:
+    display_name: "Database"
+    cluster_style: ""
+  NETWORK:
+    display_name: "Network"
+    cluster_style: ""
+  INTEGRATION:
+    display_name: "Integration"
+    cluster_style: ""
+  INFRASTRUCTURE:
+    display_name: "Infrastructure"
+    cluster_style: ""
+  INTERNAL:
+    display_name: "Internal"
+    cluster_style: ""
+  CI:
+    display_name: "CI/CD"
+    cluster_style: ""
+  REGISTRY:
+    display_name: "Registry"
+    cluster_style: ""
+  CONFIG:
+    display_name: "Configuration"
+    cluster_style: ""
+  CD:
+    display_name: "Deployment"
+    cluster_style: ""
+  ENVIRONMENT:
+    display_name: "Environment"
+    cluster_style: ""
+  SCM:
+    display_name: "Source Control"
+    cluster_style: ""
+
+# Entity node styling
+node:
+  max_description_length: 24
+  truncation_suffix: "..."
+  border_width: 1
+  cell_border: 0
+  cell_spacing: 0
+  status_bar_height: 8
+
+# Tooltip formatting
+tooltip:
+  include_status: true
+  include_owner: true
+  include_environment: true
+  include_tags: true
+  include_deployment: true 

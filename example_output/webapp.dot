@@ -1,0 +1,85 @@
+digraph Infrastructure {
+  rankdir=LR;
+  node [shape=plaintext, fontname=Helvetica];
+  subgraph cluster_USER_FACING {
+    label="User Facing";
+    User [tooltip="User: End user accessing the web app\nStatus: healthy\nOwner: product\nEnvironment: production\nTags: [external]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>User</B></TD></TR>
+        <TR><TD>End user accessing the w...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_NETWORK {
+    label="Network";
+    CDN [tooltip="CDN: Content delivery network\nStatus: healthy\nOwner: infra\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>CDN</B></TD></TR>
+        <TR><TD>Content delivery network</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    LoadBalancer [tooltip="LoadBalancer: Application load balancer\nStatus: healthy\nOwner: infra\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>LoadBalancer</B></TD></TR>
+        <TR><TD>Application load balance...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_FRONTEND {
+    label="Frontend";
+    WebServer [tooltip="WebServer: Static web server\nStatus: healthy\nOwner: frontend-team\nEnvironment: production\nTags: [critical]\nDeployment:\nimage: nginx:1.21\nreplicas: 3\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>WebServer</B></TD></TR>
+        <TR><TD>Static web server</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_BACKEND {
+    label="Backend";
+    APIServer [tooltip="APIServer: REST API backend\nStatus: degraded\nOwner: backend-team\nEnvironment: production\nTags: [critical]\nDeployment:\nimage: api:v2.1.0\nreplicas: 2\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>APIServer</B></TD></TR>
+        <TR><TD>REST API backend</TD></TR>
+        <TR><TD BGCOLOR="yellow" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_DATABASE {
+    label="Database";
+    Database [tooltip="Database: PostgreSQL database\nStatus: healthy\nOwner: data-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Database</B></TD></TR>
+        <TR><TD>PostgreSQL database</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    Cache [tooltip="Cache: Redis cache layer\nStatus: healthy\nOwner: backend-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Cache</B></TD></TR>
+        <TR><TD>Redis cache layer</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INTEGRATION {
+    label="Integration";
+    Analytics [tooltip="Analytics: Google Analytics\nStatus: healthy\nOwner: marketing\nEnvironment: production\nTags: [external]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Analytics</B></TD></TR>
+        <TR><TD>Google Analytics</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  User -> CDN [label="HTTP_Request", color=black];
+  CDN -> LoadBalancer [label="HTTP_Request", color=black];
+  LoadBalancer -> WebServer [label="HTTP_Request", color=black];
+  WebServer -> APIServer [label="API_Call", color=orange, style=dashed];
+  APIServer -> Database [label="DB_Connection", color=blue];
+  APIServer -> Cache [label="DB_Connection", color=blue];
+  WebServer -> Analytics [label="API_Call", color=orange, style=dashed];
+}

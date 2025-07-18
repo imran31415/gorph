@@ -1,0 +1,69 @@
+digraph Infrastructure {
+  rankdir=LR;
+  node [shape=plaintext, fontname=Helvetica];
+  subgraph cluster_ENVIRONMENT {
+    label="Environment";
+    ProductionCluster [tooltip="ProductionCluster: Live system\nStatus: healthy\nOwner: sre" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>ProductionCluster</B></TD></TR>
+        <TR><TD>Live system</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_SCM {
+    label="Source Control";
+    GitHub [tooltip="GitHub: Source code repo\nStatus: healthy\nOwner: dev" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>GitHub</B></TD></TR>
+        <TR><TD>Source code repo</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_CI {
+    label="CI/CD";
+    CI_Server [tooltip="CI_Server: Build and test automation\nStatus: healthy\nOwner: platform" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>CI_Server</B></TD></TR>
+        <TR><TD>Build and test automatio...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_REGISTRY {
+    label="Registry";
+    DockerRegistry [tooltip="DockerRegistry: Stores container images\nStatus: healthy\nOwner: devops" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>DockerRegistry</B></TD></TR>
+        <TR><TD>Stores container images</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_CONFIG {
+    label="Configuration";
+    HelmChart [tooltip="HelmChart: K8s packaging\nStatus: healthy\nOwner: platform" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>HelmChart</B></TD></TR>
+        <TR><TD>K8s packaging</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_CD {
+    label="Deployment";
+    ArgoCD [tooltip="ArgoCD: GitOps deployer\nStatus: healthy\nOwner: sre" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>ArgoCD</B></TD></TR>
+        <TR><TD>GitOps deployer</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  GitHub -> CI_Server [label="Triggers_Build", color=darkgreen];
+  CI_Server -> DockerRegistry [label="Pushes_Image", color=blue];
+  CI_Server -> HelmChart [label="Updates_Config", color=orange];
+  HelmChart -> ArgoCD [label="Watches_Config", color=red];
+  ArgoCD -> ProductionCluster [label="Deploys_To", color=purple];
+}

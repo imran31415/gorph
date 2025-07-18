@@ -1,0 +1,19 @@
+# Binaries
+gorph
+*.exe
+
+# Output files (except examples)
+/*.dot
+/*.png
+*.svg
+*.pdf
+
+# Go build artifacts
+*.o
+*.a
+*.so
+
+# Keep example outputs for reference
+!example_output/
+!example_output/*.dot
+!example_output/*.png 

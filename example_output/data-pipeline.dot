@@ -1,0 +1,109 @@
+digraph Infrastructure {
+  rankdir=LR;
+  node [shape=plaintext, fontname=Helvetica];
+  subgraph cluster_FRONTEND {
+    label="Frontend";
+    Dashboard [tooltip="Dashboard: Grafana analytics dashboard\nStatus: healthy\nOwner: analytics\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Dashboard</B></TD></TR>
+        <TR><TD>Grafana analytics dashbo...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INTEGRATION {
+    label="Integration";
+    DataSource [tooltip="DataSource: External data APIs\nStatus: healthy\nOwner: data-team\nEnvironment: production\nTags: [external]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>DataSource</B></TD></TR>
+        <TR><TD>External data APIs</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_BACKEND {
+    label="Backend";
+    IngestionService [tooltip="IngestionService: Data ingestion worker\nStatus: healthy\nOwner: data-eng\nEnvironment: production\nDeployment:\nimage: ingest-worker:v1.3.0\nreplicas: 2\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>IngestionService</B></TD></TR>
+        <TR><TD>Data ingestion worker</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    DataProcessor [tooltip="DataProcessor: Apache Spark ETL jobs\nStatus: degraded\nOwner: data-eng\nEnvironment: production\nDeployment:\nimage: spark-processor:v2.1.0\nreplicas: 5\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>DataProcessor</B></TD></TR>
+        <TR><TD>Apache Spark ETL jobs</TD></TR>
+        <TR><TD BGCOLOR="yellow" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    StreamProcessor [tooltip="StreamProcessor: Real-time event processing\nStatus: healthy\nOwner: data-eng\nEnvironment: production\nDeployment:\nimage: stream-processor:v1.0.5\nreplicas: 3\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>StreamProcessor</B></TD></TR>
+        <TR><TD>Real-time event processi...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    MLModel [tooltip="MLModel: Machine learning inference\nStatus: healthy\nOwner: ml-team\nEnvironment: production\nDeployment:\nimage: ml-model:v3.2.1\nreplicas: 2\n" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MLModel</B></TD></TR>
+        <TR><TD>Machine learning inferen...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_DATABASE {
+    label="Database";
+    RawDataLake [tooltip="RawDataLake: S3 raw data storage\nStatus: healthy\nOwner: data-eng\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>RawDataLake</B></TD></TR>
+        <TR><TD>S3 raw data storage</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    DataWarehouse [tooltip="DataWarehouse: Snowflake data warehouse\nStatus: healthy\nOwner: analytics\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>DataWarehouse</B></TD></TR>
+        <TR><TD>Snowflake data warehouse</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    FeatureStore [tooltip="FeatureStore: ML feature repository\nStatus: healthy\nOwner: ml-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>FeatureStore</B></TD></TR>
+        <TR><TD>ML feature repository</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INFRASTRUCTURE {
+    label="Infrastructure";
+    EventQueue [tooltip="EventQueue: Apache Kafka message queue\nStatus: healthy\nOwner: platform\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>EventQueue</B></TD></TR>
+        <TR><TD>Apache Kafka message que...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    Scheduler [tooltip="Scheduler: Airflow job orchestrator\nStatus: healthy\nOwner: data-eng\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Scheduler</B></TD></TR>
+        <TR><TD>Airflow job orchestrator</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  Scheduler -> IngestionService [label="Triggers_Build", color=darkgreen];
+  IngestionService -> DataSource [label="API_Call", color=orange, style=dashed];
+  IngestionService -> RawDataLake [label="Service_Call", color=black];
+  IngestionService -> EventQueue [label="Service_Call", color=black];
+  Scheduler -> DataProcessor [label="Triggers_Build", color=darkgreen];
+  DataProcessor -> RawDataLake [label="Service_Call", color=black];
+  DataProcessor -> DataWarehouse [label="Service_Call", color=black];
+  DataProcessor -> FeatureStore [label="Service_Call", color=black];
+  EventQueue -> StreamProcessor [label="Service_Call", color=black];
+  StreamProcessor -> FeatureStore [label="Service_Call", color=black];
+  FeatureStore -> MLModel [label="Service_Call", color=black];
+  DataWarehouse -> Dashboard [label="Service_Call", color=black];
+  MLModel -> Dashboard [label="Internal_API", color=gray, style=dotted];
+}
