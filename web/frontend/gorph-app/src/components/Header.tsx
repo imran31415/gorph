@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import ValidationIcon from './ValidationIcon';
 
 type ValidationStatus = 'valid' | 'invalid' | 'pending' | 'empty';
@@ -21,11 +21,25 @@ interface HeaderProps {
 }
 
 export default function Header({ activeTab, onTabChange, showTabs, validationStates, validationErrors }: HeaderProps) {
+  const handleSourceCodePress = () => {
+    Linking.openURL('https://github.com/imran31415/gorph');
+  };
+
+  const handleAuthorPress = () => {
+    Linking.openURL('https://github.com/imran31415');
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.titleContainer}>
         <Text style={styles.title}>Gorph</Text>
         <Text style={styles.subtitle}>Infrastructure Visualizer</Text>
+        <TouchableOpacity style={styles.githubLink} onPress={handleSourceCodePress}>
+          <Text style={styles.githubText}>
+            <Text style={styles.githubLinkText}>Source Code</Text> by{' '}
+            <Text style={styles.authorLinkText} onPress={handleAuthorPress}>Imran</Text>
+          </Text>
+        </TouchableOpacity>
       </View>
       
       {showTabs && (
@@ -109,6 +123,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#bfdbfe',
     marginTop: 2,
+  },
+  githubLink: {
+    marginTop: 4,
+  },
+  githubText: {
+    fontSize: 10,
+    color: '#bfdbfe',
+  },
+  githubLinkText: {
+    textDecorationLine: 'underline',
+  },
+  authorLinkText: {
+    textDecorationLine: 'underline',
+    fontWeight: '500',
   },
   tabContainer: {
     flexDirection: 'row',

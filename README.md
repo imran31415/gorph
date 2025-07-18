@@ -45,6 +45,7 @@ npm run dev
 - **Cross-Platform** - Web, iOS, Android via React Native/Expo
 - **Real-Time Rendering** - Instant feedback with WASM backend
 - **Template Library** - Quick start with predefined architectures
+- **WebAssembly Backend** - Go code compiled to WASM for client-side processing
 
 ### 3. **Protobuf API** - Enterprise Integration
 - **Strongly Typed** - gRPC service definitions
@@ -92,6 +93,47 @@ Pre-generated DOT and PNG files for all examples are available in `example_outpu
                             │ • Validation│
                             └─────────────┘
 ```
+
+## ⚡ WebAssembly (WASM) Implementation
+
+Gorph uses WebAssembly to bring native Go performance to the browser. Here's how it works:
+
+### **WASM Backend Architecture**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   React Native  │    │   WASM Bridge   │    │   Go WASM       │
+│   Frontend      │    │                 │    │   Module        │
+│                 │    │ • Runtime Load  │    │                 │
+│ • YAML Editor   │◄───┤ • Base64 Encode │◄───┤ • YAML Parser  │
+│ • Real-time     │    │ • Error Handle  │    │ • DOT Generator │
+│ • Validation    │    │ • Mobile Bridge │    │ • Validation    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### **How WASM Works in Gorph**
+
+1. **Go Code Compilation**: The core YAML processing logic is written in Go and compiled to WebAssembly using `GOOS=js GOARCH=wasm`
+
+2. **Client-Side Processing**: Instead of sending YAML to a server, the WASM module runs directly in the browser, providing:
+   - **Instant Feedback**: No network latency for validation and DOT generation
+   - **Privacy**: YAML content never leaves the user's device
+   - **Offline Capability**: Works without internet connection
+
+3. **Cross-Platform Bridge**: 
+   - **Web**: Direct WASM execution via JavaScript
+   - **Mobile**: WebView bridge for iOS/Android compatibility
+   - **Runtime Loading**: WASM module loaded dynamically from base64-encoded data
+
+4. **Performance Benefits**:
+   - **Native Speed**: Go performance in the browser
+   - **Small Bundle**: ~3.8MB WASM module
+   - **Shared Logic**: Same codebase as CLI tool
+
+### **WASM Functions**
+The Go WASM module provides these functions:
+- `yamlToDot(yaml: string)`: Convert YAML to DOT format
+- `validateYaml(yaml: string)`: Validate YAML syntax and structure
+- `getTemplates()`: Retrieve built-in template library
 
 ## 🎨 Web Application Features
 
