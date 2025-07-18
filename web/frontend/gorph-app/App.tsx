@@ -43,6 +43,28 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'yaml' | 'dot' | 'diagram'>('yaml');
   const [isLandscape, setIsLandscape] = useState(false);
   
+  // Validation states for each pane
+  type ValidationStatus = 'valid' | 'invalid' | 'pending' | 'empty';
+  const [validationStates, setValidationStates] = useState<{
+    yaml: ValidationStatus;
+    dot: ValidationStatus;
+    diagram: ValidationStatus;
+  }>({
+    yaml: 'empty',
+    dot: 'empty',
+    diagram: 'empty'
+  });
+  
+  const [validationErrors, setValidationErrors] = useState<{
+    yaml: string | null;
+    dot: string | null;
+    diagram: string | null;
+  }>({
+    yaml: null,
+    dot: null,
+    diagram: null
+  });
+  
   // Pane visibility state for desktop layout
   const [visiblePanes, setVisiblePanes] = useState({
     yaml: true,
@@ -66,6 +88,11 @@ export default function App() {
       dot: true,
       diagram: true
     });
+  };
+
+  // Function to maximize diagram pane
+  const maximizeDiagram = () => {
+    expandPane('diagram');
   };
 
   // Animation values for smooth transitions
@@ -124,7 +151,32 @@ export default function App() {
 
   // Process YAML when input changes
   useEffect(() => {
-    if (wasmLoaded && yamlInput.trim()) {
+    if (!yamlInput.trim()) {
+      // Empty input
+      setValidationStates({
+        yaml: 'empty',
+        dot: 'empty',
+        diagram: 'empty'
+      });
+      setValidationErrors({
+        yaml: null,
+        dot: null,
+        diagram: null
+      });
+      setDotOutput('');
+      setSvgOutput('');
+      return;
+    }
+
+    if (wasmLoaded) {
+      // Set pending state
+      setValidationStates(prev => ({
+        ...prev,
+        yaml: 'pending',
+        dot: 'pending',
+        diagram: 'pending'
+      }));
+
       if (Platform.OS === 'web') {
         // Use direct WASM on web
         try {
@@ -132,13 +184,44 @@ export default function App() {
           if (result.error) {
             setDotOutput(`Error: ${result.error}`);
             setSvgOutput('');
+            setValidationStates({
+              yaml: 'invalid',
+              dot: 'invalid',
+              diagram: 'invalid'
+            });
+            setValidationErrors({
+              yaml: result.error,
+              dot: result.error,
+              diagram: 'Cannot generate diagram due to YAML/DOT errors'
+            });
           } else if (result.dot) {
             setDotOutput(result.dot);
+            setValidationStates(prev => ({
+              yaml: 'valid',
+              dot: 'valid',
+              diagram: prev.diagram // Will be set by generateSVG
+            }));
+            setValidationErrors({
+              yaml: null,
+              dot: null,
+              diagram: null
+            });
             generateSVG(result.dot);
           }
         } catch (error) {
-          setDotOutput(`Error: ${error}`);
+          const errorMsg = `Error: ${error}`;
+          setDotOutput(errorMsg);
           setSvgOutput('');
+          setValidationStates({
+            yaml: 'invalid',
+            dot: 'invalid',
+            diagram: 'invalid'
+          });
+          setValidationErrors({
+            yaml: errorMsg,
+            dot: errorMsg,
+            diagram: 'Cannot generate diagram due to YAML/DOT errors'
+          });
         }
       } else {
         // Use WebView bridge on mobile
@@ -148,24 +231,76 @@ export default function App() {
               if (result.error) {
                 setDotOutput(`Error: ${result.error}`);
                 setSvgOutput('');
+                setValidationStates({
+                  yaml: 'invalid',
+                  dot: 'invalid',
+                  diagram: 'invalid'
+                });
+                setValidationErrors({
+                  yaml: result.error,
+                  dot: result.error,
+                  diagram: 'Cannot generate diagram due to YAML/DOT errors'
+                });
               } else if (result.dot) {
                 setDotOutput(result.dot);
+                setValidationStates(prev => ({
+                  yaml: 'valid',
+                  dot: 'valid',
+                  diagram: prev.diagram // Will be set by generateSVG
+                }));
+                setValidationErrors({
+                  yaml: null,
+                  dot: null,
+                  diagram: null
+                });
                 generateSVG(result.dot);
               }
             })
             .catch((error) => {
-              setDotOutput(`Error: ${error}`);
+              const errorMsg = `Error: ${error}`;
+              setDotOutput(errorMsg);
               setSvgOutput('');
+              setValidationStates({
+                yaml: 'invalid',
+                dot: 'invalid',
+                diagram: 'invalid'
+              });
+              setValidationErrors({
+                yaml: errorMsg,
+                dot: errorMsg,
+                diagram: 'Cannot generate diagram due to YAML/DOT errors'
+              });
             });
         } else {
           // Fallback to simple converter if bridge not ready
           try {
             const dotResult = simpleMobileYamlToDot(yamlInput);
             setDotOutput(dotResult);
+            setValidationStates({
+              yaml: 'valid',
+              dot: 'valid',
+              diagram: 'valid' // Simple converter doesn't generate diagrams
+            });
+            setValidationErrors({
+              yaml: null,
+              dot: null,
+              diagram: null
+            });
             setSvgOutput('');
           } catch (error) {
-            setDotOutput(`Error: ${error}`);
+            const errorMsg = `Error: ${error}`;
+            setDotOutput(errorMsg);
             setSvgOutput('');
+            setValidationStates({
+              yaml: 'invalid',
+              dot: 'invalid',
+              diagram: 'invalid'
+            });
+            setValidationErrors({
+              yaml: errorMsg,
+              dot: errorMsg,
+              diagram: 'Cannot generate diagram due to YAML/DOT errors'
+            });
           }
         }
       }
@@ -393,6 +528,10 @@ connections:
     if (Platform.OS === 'web') {
       // Web platforms can use more complex libraries if needed
       setSvgOutput('');
+      setValidationStates(prev => ({
+        ...prev,
+        diagram: 'valid' // Web doesn't render diagrams but DOT is valid
+      }));
       return;
     }
     
@@ -413,14 +552,38 @@ connections:
       if (response.ok) {
         const svgText = await response.text();
         setSvgOutput(svgText);
+        setValidationStates(prev => ({
+          ...prev,
+          diagram: 'valid'
+        }));
+        setValidationErrors(prev => ({
+          ...prev,
+          diagram: null
+        }));
         console.log('SVG generated successfully');
       } else {
         console.error('Failed to generate SVG:', response.status);
         setSvgOutput('');
+        setValidationStates(prev => ({
+          ...prev,
+          diagram: 'invalid'
+        }));
+        setValidationErrors(prev => ({
+          ...prev,
+          diagram: `Failed to generate diagram: HTTP ${response.status}`
+        }));
       }
     } catch (error) {
       console.error('Error generating SVG:', error);
       setSvgOutput('');
+      setValidationStates(prev => ({
+        ...prev,
+        diagram: 'invalid'
+      }));
+      setValidationErrors(prev => ({
+        ...prev,
+        diagram: `Failed to generate diagram: ${error}`
+      }));
     }
   };
 
@@ -437,6 +600,8 @@ connections:
           activeTab={activeTab}
           onTabChange={setActiveTab}
           showTabs={true}
+          validationStates={validationStates}
+          validationErrors={validationErrors}
         />
         
         <View style={styles.mobileContent}>
@@ -445,6 +610,7 @@ connections:
               value={yamlInput}
               onChange={setYamlInput}
               style={styles.fullPane}
+              onViewDiagram={() => setActiveTab('diagram')}
             />
           )}
           
@@ -492,6 +658,8 @@ connections:
         activeTab={activeTab}
         onTabChange={setActiveTab}
         showTabs={false}
+        validationStates={validationStates}
+        validationErrors={validationErrors}
       />
       
       {/* Hidden pane restore buttons */}
@@ -549,6 +717,7 @@ connections:
               }}
               isExpanded={visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram}
               canExpand={visiblePanes.dot || visiblePanes.diagram}
+              onViewDiagram={maximizeDiagram}
             />
           </Animated.View>
         )}

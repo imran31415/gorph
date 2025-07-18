@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
 
 interface YamlEditorProps {
   value: string;
@@ -8,6 +8,7 @@ interface YamlEditorProps {
   onTogglePane?: () => void;
   isExpanded?: boolean;
   canExpand?: boolean;
+  onViewDiagram?: () => void;
 }
 
 const templates = {
@@ -169,8 +170,9 @@ connections:
   }
 };
 
-export default function YamlEditor({ value, onChange, style, onTogglePane, isExpanded, canExpand }: YamlEditorProps) {
+export default function YamlEditor({ value, onChange, style, onTogglePane, isExpanded, canExpand, onViewDiagram }: YamlEditorProps) {
   const [showTemplates, setShowTemplates] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleTemplateSelect = (template: any) => {
     onChange(template.yaml);
@@ -194,6 +196,16 @@ export default function YamlEditor({ value, onChange, style, onTogglePane, isExp
           >
             <Text style={styles.templateButtonText}>Templates</Text>
           </TouchableOpacity>
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              style={styles.modeButton}
+              onPress={() => setIsEditing(!isEditing)}
+            >
+              <Text style={styles.modeButtonText}>
+                {isEditing ? '👁️ View' : '✏️ Edit'}
+              </Text>
+            </TouchableOpacity>
+          )}
           {canExpand && onTogglePane && (
             <TouchableOpacity
               style={styles.expandButton}
@@ -222,18 +234,53 @@ export default function YamlEditor({ value, onChange, style, onTogglePane, isExp
       )}
 
       <View style={styles.editorContainer}>
-        <TextInput
-          style={styles.textInput}
-          value={value}
-          onChangeText={onChange}
-          multiline
-          scrollEnabled={true}
-          placeholder="Enter your YAML infrastructure definition here..."
-          placeholderTextColor="#9ca3af"
-          textAlignVertical="top"
-          contentInsetAdjustmentBehavior="automatic"
-        />
+        {Platform.OS === 'web' && !isEditing && value.trim() ? (
+          <ScrollView style={styles.syntaxContainer}>
+            <TouchableOpacity
+              style={styles.syntaxTouchable}
+              onPress={() => setIsEditing(true)}
+            >
+              <pre style={{
+                margin: 0,
+                padding: 16,
+                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                fontSize: 14,
+                lineHeight: 1.5,
+                backgroundColor: '#ffffff',
+                color: '#1f2937',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}>
+                {value || 'Enter your YAML infrastructure definition here...'}
+              </pre>
+            </TouchableOpacity>
+          </ScrollView>
+        ) : (
+          <TextInput
+            style={styles.textInput}
+            value={value}
+            onChangeText={onChange}
+            multiline
+            scrollEnabled={true}
+            placeholder="Enter your YAML infrastructure definition here..."
+            placeholderTextColor="#9ca3af"
+            textAlignVertical="top"
+            contentInsetAdjustmentBehavior="automatic"
+            autoFocus={isEditing}
+          />
+        )}
       </View>
+      
+      {onViewDiagram && (
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.viewDiagramButton}
+            onPress={onViewDiagram}
+          >
+            <Text style={styles.viewDiagramButtonText}>📊 View Visual Diagram</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -274,6 +321,18 @@ const styles = StyleSheet.create({
   templateButtonText: {
     color: '#ffffff',
     fontSize: 14,
+    fontWeight: '500',
+  },
+  modeButton: {
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  modeButtonText: {
+    color: '#374151',
+    fontSize: 12,
     fontWeight: '500',
   },
   expandButton: {
@@ -318,5 +377,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     minHeight: 200, // Minimum height for usability
     // Remove maxHeight constraint to allow full expansion
+  },
+  syntaxContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  syntaxTouchable: {
+    flex: 1,
+    padding: 16,
+    minHeight: 200,
+  },
+  buttonContainer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  viewDiagramButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  viewDiagramButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
