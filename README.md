@@ -2,6 +2,12 @@
 
 Infrastructure visualization tool that converts YAML definitions to Graphviz diagrams.
 
+## 🌐 Live Demo
+
+**Try it now**: [gorph.ai](https://gorph.ai)
+
+The live version is fully functional and ready to use. Create infrastructure diagrams by writing YAML and see them rendered instantly in your browser.
+
 ## 🚀 Quick Start
 
 ### CLI Tool
@@ -59,6 +65,9 @@ The `example_input/` directory contains several example architectures:
 
 Pre-generated DOT and PNG files for all examples are available in `example_output/`.
 
+### Example Outputs
+<!-- TODO: Add screenshots of generated diagrams for each example architecture -->
+
 ## 🏗️ Architecture Overview
 
 ```
@@ -107,6 +116,20 @@ Pre-generated DOT and PNG files for all examples are available in `example_outpu
 │                         │
 └─────────────────────────┘
 ```
+
+## 📸 Screenshots
+
+### Desktop Interface
+<!-- TODO: Add screenshot of desktop interface showing YAML editor, DOT output, and live diagram side by side -->
+
+### Mobile Interface  
+<!-- TODO: Add screenshot of mobile interface showing tabbed navigation -->
+
+### Example Diagrams
+<!-- TODO: Add screenshots of generated diagrams from example_input/ -->
+
+### Template Selection
+<!-- TODO: Add screenshot of template modal with available architecture templates -->
 
 ## 📊 Protobuf API
 

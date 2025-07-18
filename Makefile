@@ -1,10 +1,20 @@
-.PHONY: proto build test clean clean-web examples help run-cli serve-grpc build-wasm web-frontend web-dev web-setup setup dev-full
+.PHONY: proto build test clean clean-web examples help run-cli serve-grpc build-wasm web-frontend web-dev web-setup setup dev-full docker-build docker-push k8-deploy k8-apply k8-delete
 
 # Go binary name
 BINARY_NAME=gorph
 API_DIR=api
 PROTO_DIR=$(API_DIR)
 GO_OUT_DIR=api/v1
+
+# Docker configuration
+DOCKER_REGISTRY=registry.digitalocean.com
+DOCKER_REPOSITORY=resourceloop
+DOCKER_IMAGE=$(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY)/gorph-frontend
+DOCKER_TAG=latest
+
+# Kubernetes configuration
+K8_NAMESPACE=gorph
+K8_DIR=k8
 
 # Default target
 help: ## Show this help message
@@ -103,4 +113,53 @@ dev-full: setup build-wasm ## Complete setup including web application
 	@echo "Available commands:"
 	@echo "  make web-frontend  - Start frontend development server"
 	@echo "  make build-wasm    - Rebuild WASM backend"
-	@echo "  make examples      - Generate CLI examples" 
+	@echo "  make examples      - Generate CLI examples"
+
+# Docker commands
+docker-build: build-wasm ## Build Docker image
+	@echo "Building Docker image $(DOCKER_IMAGE):$(DOCKER_TAG)..."
+	docker buildx build --platform linux/amd64,linux/arm64 -t $(DOCKER_IMAGE):$(DOCKER_TAG) --push .
+	@echo "Docker image built and pushed successfully!"
+
+docker-push: docker-build ## Build and push Docker image to registry (alias for docker-build)
+	@echo "Docker image already built and pushed in docker-build target"
+
+# Kubernetes commands
+k8-deploy: docker-push ## Build, push, and deploy to Kubernetes
+	@echo "Deploying to Kubernetes..."
+	kubectl apply -k $(K8_DIR)
+	@echo "Deployment completed!"
+	@echo ""
+	@echo "To check status:"
+	@echo "  kubectl get pods -n $(K8_NAMESPACE)"
+	@echo "  kubectl get services -n $(K8_NAMESPACE)"
+	@echo "  kubectl get ingress -n $(K8_NAMESPACE)"
+
+k8-apply: ## Apply Kubernetes manifests
+	@echo "Applying Kubernetes manifests..."
+	kubectl apply -k $(K8_DIR)
+	@echo "Kubernetes manifests applied successfully!"
+
+k8-delete: ## Delete Kubernetes resources
+	@echo "Deleting Kubernetes resources..."
+	kubectl delete -k $(K8_DIR)
+	@echo "Kubernetes resources deleted successfully!"
+
+k8-status: ## Check Kubernetes deployment status
+	@echo "Checking Kubernetes deployment status..."
+	@echo ""
+	@echo "Pods:"
+	kubectl get pods -n $(K8_NAMESPACE)
+	@echo ""
+	@echo "Services:"
+	kubectl get services -n $(K8_NAMESPACE)
+	@echo ""
+	@echo "Ingress:"
+	kubectl get ingress -n $(K8_NAMESPACE)
+	@echo ""
+	@echo "HPA:"
+	kubectl get hpa -n $(K8_NAMESPACE)
+
+k8-logs: ## Get logs from the deployment
+	@echo "Getting logs from Gorph deployment..."
+	kubectl logs -n $(K8_NAMESPACE) -l app=gorph --tail=100 -f 

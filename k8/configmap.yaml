@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gorph-config
+  namespace: gorph
+data:
+  # Environment variables for the application
+  NODE_ENV: "production"
+  PORT: "3000" 
