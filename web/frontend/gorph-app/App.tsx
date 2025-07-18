@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Dimensions, Platform, ScrollView, Animated, TouchableOpacity, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
@@ -7,6 +7,9 @@ import LoadingScreen from './src/components/LoadingScreen';
 import YamlEditor from './src/components/YamlEditor';
 import DotOutput from './src/components/DotOutput';
 import DiagramViewer from './src/components/DiagramViewer';
+import WasmBridge, { WasmBridgeRef } from './src/components/WasmBridge';
+import WasmBridgeSimple from './src/components/WasmBridgeSimple';
+import WasmBridgeRuntime from './src/components/WasmBridgeRuntime';
 
 // WASM interface types
 interface WasmResult {
@@ -72,6 +75,10 @@ export default function App() {
     diagram: new Animated.Value(1)
   });
 
+  // WebView bridge ref for mobile WASM
+  const wasmBridgeRef = useRef<WasmBridgeRef>(null);
+  const [useSimpleBridge, setUseSimpleBridge] = useState(false);
+
   // Responsive layout detection
   useEffect(() => {
     const updateLayout = () => {
@@ -89,26 +96,78 @@ export default function App() {
     if (Platform.OS === 'web') {
       loadWasm();
     } else {
-      // For mobile, WASM isn't supported, but we can still show the interface
+      // Mobile will use WebView bridge - mark as loaded immediately
+      // The actual loading happens in the WebView bridge
       setWasmLoaded(true);
     }
   }, []);
 
+  // Handle WebView bridge ready
+  const handleBridgeReady = () => {
+    console.log(`${useSimpleBridge ? 'Simple' : 'Runtime WASM'} bridge ready`);
+    setWasmError(''); // Clear any error messages
+    loadDefaultTemplate();
+  };
+
+  // Handle WebView bridge error
+  const handleBridgeError = (error: string) => {
+    console.error('WebView bridge error:', error);
+    
+    if (!useSimpleBridge) {
+      console.log('Runtime WASM bridge failed, switching to simple bridge fallback');
+      setUseSimpleBridge(true);
+      setWasmError(''); // Clear error since we're trying fallback
+    } else {
+      setWasmError(`Bridge error: ${error}`);
+    }
+  };
+
   // Process YAML when input changes
   useEffect(() => {
-    if (wasmLoaded && yamlInput.trim() && Platform.OS === 'web') {
-      try {
-        const result = window.yamlToDot(yamlInput);
-        if (result.error) {
-          setDotOutput(`Error: ${result.error}`);
+    if (wasmLoaded && yamlInput.trim()) {
+      if (Platform.OS === 'web') {
+        // Use direct WASM on web
+        try {
+          const result = window.yamlToDot(yamlInput);
+          if (result.error) {
+            setDotOutput(`Error: ${result.error}`);
+            setSvgOutput('');
+          } else if (result.dot) {
+            setDotOutput(result.dot);
+            generateSVG(result.dot);
+          }
+        } catch (error) {
+          setDotOutput(`Error: ${error}`);
           setSvgOutput('');
-        } else if (result.dot) {
-          setDotOutput(result.dot);
-          generateSVG(result.dot);
         }
-      } catch (error) {
-        setDotOutput(`Error: ${error}`);
-        setSvgOutput('');
+      } else {
+        // Use WebView bridge on mobile
+        if (wasmBridgeRef.current) {
+          wasmBridgeRef.current.yamlToDot(yamlInput)
+            .then((result) => {
+              if (result.error) {
+                setDotOutput(`Error: ${result.error}`);
+                setSvgOutput('');
+              } else if (result.dot) {
+                setDotOutput(result.dot);
+                generateSVG(result.dot);
+              }
+            })
+            .catch((error) => {
+              setDotOutput(`Error: ${error}`);
+              setSvgOutput('');
+            });
+        } else {
+          // Fallback to simple converter if bridge not ready
+          try {
+            const dotResult = simpleMobileYamlToDot(yamlInput);
+            setDotOutput(dotResult);
+            setSvgOutput('');
+          } catch (error) {
+            setDotOutput(`Error: ${error}`);
+            setSvgOutput('');
+          }
+        }
       }
     }
   }, [yamlInput, wasmLoaded]);
@@ -197,10 +256,10 @@ export default function App() {
     }
   };
 
-  const loadDefaultTemplate = () => {
+  const loadDefaultTemplate = async () => {
     try {
       console.log('Loading default template...');
-      if (window.getTemplates) {
+      if (Platform.OS === 'web' && window.getTemplates) {
         console.log('getTemplates function available');
         const templates = window.getTemplates();
         console.log('Templates returned:', templates);
@@ -210,8 +269,37 @@ export default function App() {
           setYamlInput(templates.simple);
         } else {
           console.log('No simple template found, using fallback');
-          // Fallback template
-          setYamlInput(`entities:
+          setYamlInput(getFallbackTemplate());
+        }
+      } else if (Platform.OS !== 'web' && wasmBridgeRef.current) {
+        // Use WebView bridge for mobile
+        try {
+          console.log('Getting templates from WebView bridge...');
+          const templates = await wasmBridgeRef.current.getTemplates();
+          
+          if (templates && typeof templates === 'object' && templates.simple) {
+            console.log('Setting template from bridge');
+            setYamlInput(templates.simple);
+          } else {
+            console.log('No simple template from bridge, using fallback');
+            setYamlInput(getFallbackTemplate());
+          }
+        } catch (error) {
+          console.error('Error getting templates from bridge:', error);
+          setYamlInput(getFallbackTemplate());
+        }
+      } else {
+        console.log('Using fallback template');
+        setYamlInput(getFallbackTemplate());
+      }
+    } catch (error) {
+      console.error('Error in loadDefaultTemplate:', error);
+      setYamlInput(getFallbackTemplate());
+    }
+  };
+
+  const getFallbackTemplate = () => {
+    return `entities:
   - id: Client
     category: USER_FACING
     description: "Web browser client"
@@ -243,20 +331,97 @@ connections:
     type: HTTP_Request
   - from: WebServer
     to: Database
-    type: DB_Connection`);
+    type: DB_Connection`;
+  };
+
+
+
+  // Simple mobile YAML to DOT converter
+  const simpleMobileYamlToDot = (yamlStr: string): string => {
+    try {
+      // Basic YAML parsing for mobile fallback
+      const lines = yamlStr.split('\n');
+      const entities: any[] = [];
+      const connections: any[] = [];
+      let currentSection = '';
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('entities:')) {
+          currentSection = 'entities';
+        } else if (trimmed.startsWith('connections:')) {
+          currentSection = 'connections';
+        } else if (trimmed.startsWith('- id:') && currentSection === 'entities') {
+          const id = trimmed.split('id:')[1].trim();
+          entities.push({ id });
+        } else if (trimmed.startsWith('from:') && currentSection === 'connections') {
+          const from = trimmed.split('from:')[1].trim();
+          const nextLine = lines[lines.indexOf(line) + 1];
+          const to = nextLine?.trim().startsWith('to:') ? nextLine.split('to:')[1].trim() : '';
+          if (from && to) {
+            connections.push({ from, to });
+          }
         }
-      } else {
-        console.log('getTemplates function not available');
       }
+      
+      // Generate simple DOT
+      let dot = 'digraph Infrastructure {\n';
+      dot += '  rankdir=LR;\n';
+      dot += '  node [shape=box, style=filled, fillcolor=lightblue];\n\n';
+      
+      // Add entities
+      entities.forEach(entity => {
+        dot += `  "${entity.id}" [label="${entity.id}"];\n`;
+      });
+      
+      dot += '\n';
+      
+      // Add connections
+      connections.forEach(conn => {
+        dot += `  "${conn.from}" -> "${conn.to}";\n`;
+      });
+      
+      dot += '}\n';
+      return dot;
+      
     } catch (error) {
-      console.error('Error in loadDefaultTemplate:', error);
+      throw new Error(`Failed to parse YAML: ${error}`);
     }
   };
 
   const generateSVG = async (dotCode: string) => {
-    // Note: SVG generation removed due to Metro bundler issues with GraphViz libraries
-    // DiagramViewer now shows instructions for external visualization
-    setSvgOutput('');
+    if (Platform.OS === 'web') {
+      // Web platforms can use more complex libraries if needed
+      setSvgOutput('');
+      return;
+    }
+    
+    // Mobile: Use external service to generate SVG from DOT
+    try {
+      console.log('Generating SVG from DOT code...');
+      const response = await fetch('https://quickchart.io/graphviz', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          graph: dotCode,
+          format: 'svg'
+        }),
+      });
+      
+      if (response.ok) {
+        const svgText = await response.text();
+        setSvgOutput(svgText);
+        console.log('SVG generated successfully');
+      } else {
+        console.error('Failed to generate SVG:', response.status);
+        setSvgOutput('');
+      }
+    } catch (error) {
+      console.error('Error generating SVG:', error);
+      setSvgOutput('');
+    }
   };
 
   if (!wasmLoaded) {
@@ -298,6 +463,23 @@ connections:
             />
           )}
         </View>
+        
+        {/* WebView bridge for mobile WASM */}
+        {!useSimpleBridge ? (
+          <WasmBridgeRuntime
+            key="runtime-wasm-bridge"
+            ref={wasmBridgeRef}
+            onReady={handleBridgeReady}
+            onError={handleBridgeError}
+          />
+        ) : (
+          <WasmBridgeSimple
+            key="simple-bridge"
+            ref={wasmBridgeRef}
+            onReady={handleBridgeReady}
+            onError={handleBridgeError}
+          />
+        )}
       </View>
     );
   }
@@ -344,58 +526,79 @@ connections:
       
       <View style={styles.threePane}>
         {visiblePanes.yaml && (
-          <Animated.View style={[styles.leftPane, { flex: visiblePanes.yaml ? 1 : 0 }]}>
+          <Animated.View style={[
+            styles.leftPane, 
+            { 
+              flex: visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram ? 1 : 
+                    visiblePanes.yaml ? 1 : 0,
+              minHeight: 0
+            }
+          ]}>
             <YamlEditor
               value={yamlInput}
               onChange={setYamlInput}
-              style={{ flex: 1 }}
-                          onTogglePane={() => {
-              if (visiblePanes.yaml && visiblePanes.dot && visiblePanes.diagram) {
-                // All panes visible, expand this one
-                expandPane('yaml');
-              } else {
-                // Some panes hidden, minimize (show all)
-                minimizePanes();
-              }
-            }}
-            isExpanded={visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram}
-            canExpand={visiblePanes.dot || visiblePanes.diagram}
+              style={{ flex: 1, minHeight: 0 }}
+              onTogglePane={() => {
+                if (visiblePanes.yaml && visiblePanes.dot && visiblePanes.diagram) {
+                  // All panes visible, expand this one
+                  expandPane('yaml');
+                } else {
+                  // Some panes hidden, minimize (show all)
+                  minimizePanes();
+                }
+              }}
+              isExpanded={visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram}
+              canExpand={visiblePanes.dot || visiblePanes.diagram}
             />
           </Animated.View>
         )}
         
         {visiblePanes.dot && (
-          <Animated.View style={[styles.middlePane, { flex: visiblePanes.dot ? 1 : 0 }]}>
+          <Animated.View style={[
+            styles.middlePane, 
+            { 
+              flex: visiblePanes.dot && !visiblePanes.yaml && !visiblePanes.diagram ? 1 : 
+                    visiblePanes.dot ? 1 : 0,
+              minHeight: 0
+            }
+          ]}>
             <DotOutput
               value={dotOutput}
-              style={{ flex: 1 }}
-                          onTogglePane={() => {
-              if (visiblePanes.yaml && visiblePanes.dot && visiblePanes.diagram) {
-                // All panes visible, expand this one
-                expandPane('dot');
-              } else {
-                // Some panes hidden, minimize (show all)
-                minimizePanes();
-              }
-            }}
-            isExpanded={visiblePanes.dot && !visiblePanes.yaml && !visiblePanes.diagram}
-            canExpand={visiblePanes.yaml || visiblePanes.diagram}
+              style={{ flex: 1, minHeight: 0 }}
+              onTogglePane={() => {
+                if (visiblePanes.yaml && visiblePanes.dot && visiblePanes.diagram) {
+                  // All panes visible, expand this one
+                  expandPane('dot');
+                } else {
+                  // Some panes hidden, minimize (show all)
+                  minimizePanes();
+                }
+              }}
+              isExpanded={visiblePanes.dot && !visiblePanes.yaml && !visiblePanes.diagram}
+              canExpand={visiblePanes.yaml || visiblePanes.diagram}
             />
           </Animated.View>
         )}
         
         {visiblePanes.diagram && (
-          <Animated.View style={[styles.rightPane, { flex: visiblePanes.diagram ? 1 : 0 }]}>
+          <Animated.View style={[
+            styles.rightPane, 
+            { 
+              flex: visiblePanes.diagram && !visiblePanes.yaml && !visiblePanes.dot ? 1 : 
+                    visiblePanes.diagram ? 1 : 0,
+              minHeight: 0
+            }
+          ]}>
             <DiagramViewer
               svg={svgOutput}
               dotContent={dotOutput}
-              style={{ flex: 1 }}
-                          onTogglePane={() => {
-              if (visiblePanes.yaml && visiblePanes.dot && visiblePanes.diagram) {
-                // All panes visible, expand this one
-                expandPane('diagram');
-              } else {
-                // Some panes hidden, minimize (show all)
+              style={{ flex: 1, minHeight: 0 }}
+              onTogglePane={() => {
+                if (visiblePanes.yaml && visiblePanes.dot && visiblePanes.diagram) {
+                  // All panes visible, expand this one
+                  expandPane('diagram');
+                } else {
+                  // Some panes hidden, minimize (show all)
                 minimizePanes();
               }
             }}
@@ -405,6 +608,23 @@ connections:
           </Animated.View>
         )}
       </View>
+      
+      {/* WebView bridge for mobile WASM */}
+      {!useSimpleBridge ? (
+        <WasmBridgeRuntime
+          key="runtime-wasm-bridge"
+          ref={wasmBridgeRef}
+          onReady={handleBridgeReady}
+          onError={handleBridgeError}
+        />
+      ) : (
+        <WasmBridgeSimple
+          key="simple-bridge"
+          ref={wasmBridgeRef}
+          onReady={handleBridgeReady}
+          onError={handleBridgeError}
+        />
+      )}
     </View>
   );
 }
@@ -417,22 +637,26 @@ const styles = StyleSheet.create({
   threePane: {
     flex: 1,
     flexDirection: 'row',
+    minHeight: 0, // Allow flex shrinking
   },
   leftPane: {
     flex: 1,
     backgroundColor: '#ffffff',
     borderRightWidth: 1,
     borderRightColor: '#e0e0e0',
+    minHeight: 0, // Allow flex shrinking
   },
   middlePane: {
     flex: 1,
     backgroundColor: '#f9f9f9',
     borderRightWidth: 1,
     borderRightColor: '#e0e0e0',
+    minHeight: 0, // Allow flex shrinking
   },
   rightPane: {
     flex: 1,
     backgroundColor: '#ffffff',
+    minHeight: 0, // Allow flex shrinking
   },
   fullPane: {
     flex: 1,

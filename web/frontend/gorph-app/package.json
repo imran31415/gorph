@@ -18,7 +18,8 @@
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
     "react-native-syntax-highlighter": "^2.1.0",
-    "react-native-web": "^0.20.0"
+    "react-native-web": "^0.20.0",
+    "react-native-webview": "^13.15.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

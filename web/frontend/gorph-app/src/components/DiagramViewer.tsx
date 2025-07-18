@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
+import { WebView } from 'react-native-webview';
 
 interface DiagramViewerProps {
   svg: string;
@@ -42,6 +43,54 @@ function SvgRenderer({ svgContent, zoom }: SvgRendererProps) {
         padding: '20px',
         minHeight: '300px'
       }}
+    />
+  );
+}
+
+// Mobile SVG renderer using WebView
+function MobileSvgRenderer({ svgContent }: { svgContent: string }) {
+  if (Platform.OS === 'web') {
+    return null;
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+        <style>
+          body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #ffffff;
+          }
+          svg {
+            max-width: 100%;
+            height: auto;
+          }
+        </style>
+      </head>
+      <body>
+        ${svgContent}
+      </body>
+    </html>
+  `;
+
+  return (
+    <WebView
+      source={{ html }}
+      style={{ flex: 1, minHeight: 400 }}
+      scalesPageToFit={true}
+      startInLoadingState={true}
+      javaScriptEnabled={false}
+      scrollEnabled={true}
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
     />
   );
 }
@@ -336,53 +385,46 @@ export default function DiagramViewer({ svg, dotContent, style, onTogglePane, is
     );
   }
 
-  // Mobile fallback - show SVG in ScrollView
+  // Mobile: Show SVG using WebView if available
   return (
     <View style={[styles.container, style]}>
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>📊 Diagram</Text>
         </View>
-                  <View style={styles.headerControls}>
-            <View style={styles.controls}>
-              <TouchableOpacity style={styles.controlButton} onPress={handleZoomOut}>
-                <Text style={styles.controlButtonText}>-</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.zoomButton} onPress={handleZoomReset}>
-                <Text style={styles.zoomButtonText}>{Math.round(zoom * 100)}%</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn}>
-                <Text style={styles.controlButtonText}>+</Text>
-              </TouchableOpacity>
-            </View>
-            {canExpand && onTogglePane && (
-              <TouchableOpacity
-                style={styles.expandButton}
-                onPress={onTogglePane}
-              >
-                <Text style={styles.expandButtonText}>
-                  {isExpanded ? '⤡' : '⤢'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+        <View style={styles.headerControls}>
+          {canExpand && onTogglePane && (
+            <TouchableOpacity
+              style={styles.expandButton}
+              onPress={onTogglePane}
+            >
+              <Text style={styles.expandButtonText}>
+                {isExpanded ? '-' : '+'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        maximumZoomScale={3}
-        minimumZoomScale={0.2}
-        showsHorizontalScrollIndicator
-        showsVerticalScrollIndicator
-      >
+      {svg ? (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          maximumZoomScale={3}
+          minimumZoomScale={0.2}
+          showsHorizontalScrollIndicator
+          showsVerticalScrollIndicator
+        >
+          <MobileSvgRenderer svgContent={svg} />
+        </ScrollView>
+      ) : (
         <View style={styles.mobileEmptyContainer}>
-          <Text style={styles.emptyText}>Diagram rendering not available on mobile</Text>
+          <Text style={styles.emptyText}>📊 Generating diagram...</Text>
           <Text style={styles.emptySubtext}>
-            Please use the web version to view diagrams
+            {dotContent ? 'Processing your infrastructure diagram' : 'Enter YAML to see your diagram'}
           </Text>
         </View>
-      </ScrollView>
+      )}
     </View>
   );
 }

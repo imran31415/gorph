@@ -242,6 +242,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+    minHeight: 0, // Allow flex shrinking
   },
   header: {
     flexDirection: 'row',
@@ -305,6 +306,7 @@ const styles = StyleSheet.create({
   editorContainer: {
     flex: 1,
     backgroundColor: '#ffffff',
+    minHeight: 0, // Allow flex shrinking
   },
   textInput: {
     flex: 1,
@@ -314,7 +316,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     textAlignVertical: 'top',
     backgroundColor: '#ffffff',
-    // Ensure the text input can scroll properly
-    maxHeight: '100%',
+    minHeight: 200, // Minimum height for usability
+    // Remove maxHeight constraint to allow full expansion
   },
 }); 
