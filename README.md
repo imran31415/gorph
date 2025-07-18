@@ -7,6 +7,8 @@ Infrastructure visualization tool that converts YAML definitions to Graphviz dia
 **Try it now**: [gorph.ai](https://gorph.ai)
 
 The live version is fully functional and ready to use. Create infrastructure diagrams by writing YAML and see them rendered instantly in your browser.
+<img width="1505" height="899" alt="image" src="https://github.com/user-attachments/assets/92159075-0344-4366-9a85-50c8277dd59a" />
+
 
 ## 🚀 Quick Start
 
@@ -162,16 +164,18 @@ The Go WASM module provides these functions:
 ## 📸 Screenshots
 
 ### Desktop Interface
-<!-- TODO: Add screenshot of desktop interface showing YAML editor, DOT output, and live diagram side by side -->
+<img width="1505" height="899" alt="image" src="https://github.com/user-attachments/assets/dc3b0c6f-ff52-4a01-88b6-83a4f030d469" />
 
 ### Mobile Interface  
-<!-- TODO: Add screenshot of mobile interface showing tabbed navigation -->
+<img width="360" height="734" alt="image" src="https://github.com/user-attachments/assets/007ac4ee-3979-4109-8b15-12ff7ff312bd" />
+<img width="390" height="738" alt="image" src="https://github.com/user-attachments/assets/944231ef-3043-4218-a4ec-d9d5b2c3c923" />
+
 
 ### Example Diagrams
-<!-- TODO: Add screenshots of generated diagrams from example_input/ -->
+<img width="1506" height="896" alt="image" src="https://github.com/user-attachments/assets/94269937-36d0-4693-8838-41652291060c" />
 
 ### Template Selection
-<!-- TODO: Add screenshot of template modal with available architecture templates -->
+<img width="868" height="790" alt="image" src="https://github.com/user-attachments/assets/432ea9b5-ffc3-4638-9aa2-1d32d0285f92" />
 
 ## 📊 Protobuf API
 
