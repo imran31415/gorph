@@ -1,0 +1,59 @@
+entities:
+  - id: GitHub
+    category: SCM
+    description: "Source code repo"
+    status: healthy
+    owner: dev
+    shape: ellipse
+
+  - id: CI_Server
+    category: CI
+    description: "Build and test automation"
+    status: healthy
+    owner: platform
+    attributes:
+      tool: GitHubActions
+    shape: box
+
+  - id: DockerRegistry
+    category: REGISTRY
+    description: "Stores container images"
+    status: healthy
+    owner: devops
+
+  - id: HelmChart
+    category: CONFIG
+    description: "K8s packaging"
+    status: healthy
+    owner: platform
+
+  - id: ArgoCD
+    category: CD
+    description: "GitOps deployer"
+    status: healthy
+    owner: sre
+    shape: cylinder
+
+  - id: ProductionCluster
+    category: ENVIRONMENT
+    description: "Live system"
+    status: healthy
+    owner: sre
+    shape: rectangle
+
+connections:
+  - from: GitHub
+    to: CI_Server
+    type: Triggers_Build
+  - from: CI_Server
+    to: DockerRegistry
+    type: Pushes_Image
+  - from: CI_Server
+    to: HelmChart
+    type: Updates_Config
+  - from: HelmChart
+    to: ArgoCD
+    type: Watches_Config
+  - from: ArgoCD
+    to: ProductionCluster
+    type: Deploys_To

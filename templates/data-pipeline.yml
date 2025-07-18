@@ -1,0 +1,158 @@
+entities:
+  - id: DataSource
+    category: INTEGRATION
+    description: "External data APIs"
+    status: healthy
+    owner: data-team
+    environment: production
+    tags: [external]
+    attributes:
+      type: REST_API
+
+  - id: IngestionService
+    category: BACKEND
+    description: "Data ingestion worker"
+    status: healthy
+    owner: data-eng
+    environment: production
+    attributes:
+      language: Python
+    deployment_config:
+      replicas: 2
+      image: ingest-worker:v1.3.0
+
+  - id: RawDataLake
+    category: DATABASE
+    description: "S3 raw data storage"
+    status: healthy
+    owner: data-eng
+    environment: production
+    attributes:
+      storage: S3
+      bucket: raw-data-bucket
+
+  - id: DataProcessor
+    category: BACKEND
+    description: "Apache Spark ETL jobs"
+    status: degraded
+    owner: data-eng
+    environment: production
+    attributes:
+      framework: Spark
+      version: "3.2"
+    deployment_config:
+      replicas: 5
+      image: spark-processor:v2.1.0
+
+  - id: DataWarehouse
+    category: DATABASE
+    description: "Snowflake data warehouse"
+    status: healthy
+    owner: analytics
+    environment: production
+    attributes:
+      platform: Snowflake
+
+  - id: FeatureStore
+    category: DATABASE
+    description: "ML feature repository"
+    status: healthy
+    owner: ml-team
+    environment: production
+    attributes:
+      tool: Feast
+      storage: Redis
+
+  - id: StreamProcessor
+    category: BACKEND
+    description: "Real-time event processing"
+    status: healthy
+    owner: data-eng
+    environment: production
+    attributes:
+      framework: Kafka_Streams
+    deployment_config:
+      replicas: 3
+      image: stream-processor:v1.0.5
+
+  - id: EventQueue
+    category: INFRASTRUCTURE
+    description: "Apache Kafka message queue"
+    status: healthy
+    owner: platform
+    environment: production
+    attributes:
+      tool: Kafka
+      version: "2.8"
+
+  - id: MLModel
+    category: BACKEND
+    description: "Machine learning inference"
+    status: healthy
+    owner: ml-team
+    environment: production
+    attributes:
+      framework: TensorFlow
+    deployment_config:
+      replicas: 2
+      image: ml-model:v3.2.1
+
+  - id: Dashboard
+    category: FRONTEND
+    description: "Grafana analytics dashboard"
+    status: healthy
+    owner: analytics
+    environment: production
+    attributes:
+      tool: Grafana
+
+  - id: Scheduler
+    category: INFRASTRUCTURE
+    description: "Airflow job orchestrator"
+    status: healthy
+    owner: data-eng
+    environment: production
+    attributes:
+      tool: Airflow
+      version: "2.3"
+
+connections:
+  - from: Scheduler
+    to: IngestionService
+    type: Triggers_Build
+  - from: IngestionService
+    to: DataSource
+    type: API_Call
+  - from: IngestionService
+    to: RawDataLake
+    type: Service_Call
+  - from: IngestionService
+    to: EventQueue
+    type: Service_Call
+  - from: Scheduler
+    to: DataProcessor
+    type: Triggers_Build
+  - from: DataProcessor
+    to: RawDataLake
+    type: Service_Call
+  - from: DataProcessor
+    to: DataWarehouse
+    type: Service_Call
+  - from: DataProcessor
+    to: FeatureStore
+    type: Service_Call
+  - from: EventQueue
+    to: StreamProcessor
+    type: Service_Call
+  - from: StreamProcessor
+    to: FeatureStore
+    type: Service_Call
+  - from: FeatureStore
+    to: MLModel
+    type: Service_Call
+  - from: DataWarehouse
+    to: Dashboard
+    type: Service_Call
+  - from: MLModel
+    to: Dashboard
+    type: Internal_API 

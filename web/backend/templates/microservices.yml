@@ -1,0 +1,155 @@
+entities:
+  - id: MobileApp
+    category: USER_FACING
+    description: "Mobile client application"
+    status: healthy
+    owner: mobile-team
+    environment: production
+    tags: [critical]
+    attributes:
+      platform: iOS/Android
+
+  - id: APIGateway
+    category: NETWORK
+    description: "Entry point for all services"
+    status: healthy
+    owner: platform-team
+    environment: production
+    attributes:
+      tool: Kong
+    deployment_config:
+      replicas: 3
+      image: kong:2.8
+
+  - id: UserService
+    category: BACKEND
+    description: "User management microservice"
+    status: healthy
+    owner: user-team
+    environment: production
+    attributes:
+      language: Java
+    deployment_config:
+      replicas: 2
+      image: user-service:v1.5.0
+
+  - id: OrderService
+    category: BACKEND
+    description: "Order processing service"
+    status: degraded
+    owner: order-team
+    environment: production
+    attributes:
+      language: Go
+    deployment_config:
+      replicas: 4
+      image: order-service:v2.1.0
+
+  - id: PaymentService
+    category: BACKEND
+    description: "Payment processing service"
+    status: down
+    owner: payment-team
+    environment: production
+    tags: [critical]
+    attributes:
+      language: Python
+    deployment_config:
+      replicas: 3
+      image: payment-service:v1.8.0
+
+  - id: NotificationService
+    category: BACKEND
+    description: "Email and push notifications"
+    status: healthy
+    owner: comms-team
+    environment: production
+    attributes:
+      language: NodeJS
+    deployment_config:
+      replicas: 2
+      image: notification-service:v1.2.0
+
+  - id: UserDB
+    category: DATABASE
+    description: "User data PostgreSQL"
+    status: healthy
+    owner: user-team
+    environment: production
+    attributes:
+      engine: PostgreSQL
+      version: "13"
+
+  - id: OrderDB
+    category: DATABASE
+    description: "Order data MongoDB"
+    status: healthy
+    owner: order-team
+    environment: production
+    attributes:
+      engine: MongoDB
+      version: "5.0"
+
+  - id: MessageQueue
+    category: INFRASTRUCTURE
+    description: "RabbitMQ message broker"
+    status: healthy
+    owner: platform-team
+    environment: production
+    attributes:
+      tool: RabbitMQ
+      version: "3.9"
+
+  - id: PaymentGateway
+    category: INTEGRATION
+    description: "External payment processor"
+    status: healthy
+    owner: integrations
+    environment: production
+    tags: [external]
+
+  - id: EmailProvider
+    category: INTEGRATION
+    description: "SendGrid email service"
+    status: healthy
+    owner: integrations
+    environment: production
+    tags: [external]
+
+connections:
+  - from: MobileApp
+    to: APIGateway
+    type: HTTP_Request
+  - from: APIGateway
+    to: UserService
+    type: Service_Call
+  - from: APIGateway
+    to: OrderService
+    type: Service_Call
+  - from: APIGateway
+    to: PaymentService
+    type: Service_Call
+  - from: UserService
+    to: UserDB
+    type: DB_Connection
+  - from: OrderService
+    to: OrderDB
+    type: DB_Connection
+  - from: OrderService
+    to: MessageQueue
+    type: Service_Call
+  - from: PaymentService
+    to: PaymentGateway
+    type: API_Call
+  - from: PaymentService
+    to: MessageQueue
+    type: Service_Call
+  - from: NotificationService
+    to: MessageQueue
+    type: Service_Call
+  - from: NotificationService
+    to: EmailProvider
+    type: API_Call
+  - from: MessageQueue
+    to: NotificationService
+    type: Service_Call 

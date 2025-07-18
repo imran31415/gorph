@@ -1,0 +1,132 @@
+digraph Infrastructure {
+  rankdir=LR;
+  node [shape=plaintext, fontname=Helvetica];
+  subgraph cluster_INTEGRATION {
+    label="Integration";
+    QuickChartAPI [tooltip="QuickChartAPI: External GraphViz rendering service\nStatus: healthy\nOwner: integrations\nEnvironment: production\nTags: [external]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>QuickChartAPI</B></TD></TR>
+        <TR><TD>External GraphViz render...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INFRASTRUCTURE {
+    label="Infrastructure";
+    MetroBundler [tooltip="MetroBundler: JavaScript bundler for React Native\nStatus: healthy\nOwner: platform\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MetroBundler</B></TD></TR>
+        <TR><TD>JavaScript bundler for R...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    ExpoDevServer [tooltip="ExpoDevServer: Development server for Expo applications\nStatus: healthy\nOwner: platform\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>ExpoDevServer</B></TD></TR>
+        <TR><TD>Development server for E...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_CONFIG {
+    label="Configuration";
+    TemplateLibrary [tooltip="TemplateLibrary: External YAML template files\nStatus: healthy\nOwner: content\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>TemplateLibrary</B></TD></TR>
+        <TR><TD>External YAML template f...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INTERNAL {
+    label="Internal";
+    ValidationSystem [tooltip="ValidationSystem: Real-time YAML validation and error reporting\nStatus: healthy\nOwner: frontend-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>ValidationSystem</B></TD></TR>
+        <TR><TD>Real-time YAML validatio...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_USER_FACING {
+    label="User Facing";
+    User [tooltip="User: End user accessing the infrastructure visualization tool\nStatus: healthy\nOwner: product\nEnvironment: production\nTags: [external]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>User</B></TD></TR>
+        <TR><TD>End user accessing the i...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    WebBrowser [tooltip="WebBrowser: Web browser running the React Native web app\nStatus: healthy\nOwner: frontend\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>WebBrowser</B></TD></TR>
+        <TR><TD>Web browser running the ...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    MobileDevice [tooltip="MobileDevice: iOS/Android device running the React Native app\nStatus: healthy\nOwner: mobile\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MobileDevice</B></TD></TR>
+        <TR><TD>iOS/Android device runni...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_FRONTEND {
+    label="Frontend";
+    ReactNativeApp [tooltip="ReactNativeApp: Cross-platform React Native application\nStatus: healthy\nOwner: frontend-team\nEnvironment: production\nTags: [critical]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>ReactNativeApp</B></TD></TR>
+        <TR><TD>Cross-platform React Nat...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    WebView [tooltip="WebView: WebView component for WASM execution on mobile\nStatus: healthy\nOwner: frontend-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>WebView</B></TD></TR>
+        <TR><TD>WebView component for WA...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    DiagramRenderer [tooltip="DiagramRenderer: SVG diagram display component\nStatus: healthy\nOwner: frontend-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>DiagramRenderer</B></TD></TR>
+        <TR><TD>SVG diagram display comp...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_BACKEND {
+    label="Backend";
+    GoWasmModule [tooltip="GoWasmModule: Go WebAssembly module for YAML processing\nStatus: healthy\nOwner: backend-team\nEnvironment: production\nTags: [critical]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>GoWasmModule</B></TD></TR>
+        <TR><TD>Go WebAssembly module fo...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    WasmBridge [tooltip="WasmBridge: Runtime WASM bridge for mobile platforms\nStatus: healthy\nOwner: backend-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>WasmBridge</B></TD></TR>
+        <TR><TD>Runtime WASM bridge for ...</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  User -> WebBrowser [label="User_Interaction", color=purple, style=bold];
+  User -> MobileDevice [label="User_Interaction", color=purple, style=bold];
+  WebBrowser -> ReactNativeApp [label="HTTP_Request", color=black];
+  MobileDevice -> ReactNativeApp [label="Native_App"];
+  ReactNativeApp -> WebView [label="Component_Render"];
+  WebView -> GoWasmModule [label="WASM_Execution"];
+  WasmBridge -> GoWasmModule [label="WASM_Loading"];
+  ReactNativeApp -> WasmBridge [label="Component_Integration"];
+  ReactNativeApp -> QuickChartAPI [label="API_Call", color=orange, style=dashed];
+  MetroBundler -> ReactNativeApp [label="Code_Bundling"];
+  ExpoDevServer -> MetroBundler [label="Development_Support"];
+  GoWasmModule -> TemplateLibrary [label="File_Reading"];
+  ReactNativeApp -> ValidationSystem [label="Component_Integration"];
+  ValidationSystem -> GoWasmModule [label="Validation_Request"];
+  ReactNativeApp -> DiagramRenderer [label="Component_Render"];
+  DiagramRenderer -> QuickChartAPI [label="SVG_Request"];
+}

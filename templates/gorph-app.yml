@@ -1,0 +1,185 @@
+entities:
+  - id: User
+    category: USER_FACING
+    description: "End user accessing the infrastructure visualization tool"
+    status: healthy
+    owner: product
+    environment: production
+    tags: [external]
+    attributes:
+      type: human
+
+  - id: WebBrowser
+    category: USER_FACING
+    description: "Web browser running the React Native web app"
+    status: healthy
+    owner: frontend
+    environment: production
+    attributes:
+      platform: cross-platform
+
+  - id: MobileDevice
+    category: USER_FACING
+    description: "iOS/Android device running the React Native app"
+    status: healthy
+    owner: mobile
+    environment: production
+    attributes:
+      platform: iOS/Android
+
+  - id: ReactNativeApp
+    category: FRONTEND
+    description: "Cross-platform React Native application"
+    status: healthy
+    owner: frontend-team
+    environment: production
+    tags: [critical]
+    attributes:
+      framework: ReactNative
+      bundler: Metro
+      platform: Expo
+
+  - id: WebView
+    category: FRONTEND
+    description: "WebView component for WASM execution on mobile"
+    status: healthy
+    owner: frontend-team
+    environment: production
+    attributes:
+      component: react-native-webview
+      purpose: WASM_bridge
+
+  - id: GoWasmModule
+    category: BACKEND
+    description: "Go WebAssembly module for YAML processing"
+    status: healthy
+    owner: backend-team
+    environment: production
+    tags: [critical]
+    attributes:
+      language: Go
+      target: WASM
+      size: "3.8MB"
+      functions: "yamlToDot, validateYaml, getTemplates"
+
+  - id: WasmBridge
+    category: BACKEND
+    description: "Runtime WASM bridge for mobile platforms"
+    status: healthy
+    owner: backend-team
+    environment: production
+    attributes:
+      type: WebView_bridge
+      loading: runtime_fetch
+      encoding: base64
+
+  - id: QuickChartAPI
+    category: INTEGRATION
+    description: "External GraphViz rendering service"
+    status: healthy
+    owner: integrations
+    environment: production
+    tags: [external]
+    attributes:
+      service: QuickChart
+      purpose: SVG_generation
+
+  - id: MetroBundler
+    category: INFRASTRUCTURE
+    description: "JavaScript bundler for React Native"
+    status: healthy
+    owner: platform
+    environment: production
+    attributes:
+      tool: Metro
+      config: metro.config.js
+
+  - id: ExpoDevServer
+    category: INFRASTRUCTURE
+    description: "Development server for Expo applications"
+    status: healthy
+    owner: platform
+    environment: production
+    attributes:
+      tool: Expo
+      port: 8081
+
+  - id: TemplateLibrary
+    category: CONFIG
+    description: "External YAML template files"
+    status: healthy
+    owner: content
+    environment: production
+    attributes:
+      location: templates/
+      format: YAML
+      count: 8
+
+  - id: ValidationSystem
+    category: INTERNAL
+    description: "Real-time YAML validation and error reporting"
+    status: healthy
+    owner: frontend-team
+    environment: production
+    attributes:
+      features: "syntax_check, visual_indicators, error_details"
+
+  - id: DiagramRenderer
+    category: FRONTEND
+    description: "SVG diagram display component"
+    status: healthy
+    owner: frontend-team
+    environment: production
+    attributes:
+      format: SVG
+      source: QuickChart_API
+
+connections:
+  - from: User
+    to: WebBrowser
+    type: User_Interaction
+  - from: User
+    to: MobileDevice
+    type: User_Interaction
+  - from: WebBrowser
+    to: ReactNativeApp
+    type: HTTP_Request
+  - from: MobileDevice
+    to: ReactNativeApp
+    type: Native_App
+  - from: ReactNativeApp
+    to: WebView
+    type: Component_Render
+  - from: WebView
+    to: GoWasmModule
+    type: WASM_Execution
+  - from: WasmBridge
+    to: GoWasmModule
+    type: WASM_Loading
+  - from: ReactNativeApp
+    to: WasmBridge
+    type: Component_Integration
+  - from: ReactNativeApp
+    to: QuickChartAPI
+    type: API_Call
+  - from: MetroBundler
+    to: ReactNativeApp
+    type: Code_Bundling
+  - from: ExpoDevServer
+    to: MetroBundler
+    type: Development_Support
+  - from: GoWasmModule
+    to: TemplateLibrary
+    type: File_Reading
+  - from: ReactNativeApp
+    to: ValidationSystem
+    type: Component_Integration
+  - from: ValidationSystem
+    to: GoWasmModule
+    type: Validation_Request
+  - from: ReactNativeApp
+    to: DiagramRenderer
+    type: Component_Render
+  - from: DiagramRenderer
+    to: QuickChartAPI
+    type: SVG_Request 

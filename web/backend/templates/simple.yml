@@ -1,0 +1,43 @@
+entities:
+  - id: Client
+    category: USER_FACING
+    description: "Web browser client"
+    status: healthy
+    owner: frontend
+    environment: production
+
+  - id: WebServer
+    category: FRONTEND
+    description: "Simple web server"
+    status: healthy
+    owner: ops
+    environment: production
+    attributes:
+      language: Go
+
+  - id: Database
+    category: DATABASE
+    description: "SQLite database"
+    status: degraded
+    owner: ops
+    environment: production
+    attributes:
+      engine: SQLite
+
+  - id: BackupService
+    category: BACKEND
+    description: "Backup scheduler"
+    status: down
+    owner: ops
+    environment: production
+
+connections:
+  - from: Client
+    to: WebServer
+    type: HTTP_Request
+  - from: WebServer
+    to: Database
+    type: DB_Connection
+  - from: BackupService
+    to: Database
+    type: DB_Connection 

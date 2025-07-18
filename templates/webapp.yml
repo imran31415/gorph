@@ -1,0 +1,104 @@
+entities:
+  - id: User
+    category: USER_FACING
+    description: "End user accessing the web app"
+    status: healthy
+    owner: product
+    environment: production
+    tags: [external]
+    shape: ellipse
+
+  - id: CDN
+    category: NETWORK
+    description: "Content delivery network"
+    status: healthy
+    owner: infra
+    environment: production
+    attributes:
+      provider: CloudFlare
+
+  - id: LoadBalancer
+    category: NETWORK
+    description: "Application load balancer"
+    status: healthy
+    owner: infra
+    environment: production
+    attributes:
+      type: ALB
+
+  - id: WebServer
+    category: FRONTEND
+    description: "Static web server"
+    status: healthy
+    owner: frontend-team
+    environment: production
+    tags: [critical]
+    attributes:
+      framework: Nginx
+    deployment_config:
+      replicas: 3
+      image: nginx:1.21
+
+  - id: APIServer
+    category: BACKEND
+    description: "REST API backend"
+    status: degraded
+    owner: backend-team
+    environment: production
+    tags: [critical]
+    attributes:
+      language: Python
+    deployment_config:
+      replicas: 2
+      image: api:v2.1.0
+
+  - id: Database
+    category: DATABASE
+    description: "PostgreSQL database"
+    status: healthy
+    owner: data-team
+    environment: production
+    attributes:
+      engine: PostgreSQL
+      version: "14"
+
+  - id: Cache
+    category: DATABASE
+    description: "Redis cache layer"
+    status: healthy
+    owner: backend-team
+    environment: production
+    attributes:
+      engine: Redis
+      version: "6.2"
+
+  - id: Analytics
+    category: INTEGRATION
+    description: "Google Analytics"
+    status: healthy
+    owner: marketing
+    environment: production
+    tags: [external]
+
+connections:
+  - from: User
+    to: CDN
+    type: HTTP_Request
+  - from: CDN
+    to: LoadBalancer
+    type: HTTP_Request
+  - from: LoadBalancer
+    to: WebServer
+    type: HTTP_Request
+  - from: WebServer
+    to: APIServer
+    type: API_Call
+  - from: APIServer
+    to: Database
+    type: DB_Connection
+  - from: APIServer
+    to: Cache
+    type: DB_Connection
+  - from: WebServer
+    to: Analytics
+    type: API_Call 

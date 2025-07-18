@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
+import TemplateModal from './TemplateModal';
 
 interface YamlEditorProps {
   value: string;
@@ -9,12 +10,29 @@ interface YamlEditorProps {
   isExpanded?: boolean;
   canExpand?: boolean;
   onViewDiagram?: () => void;
+  templates?: Record<string, any>;
 }
 
-const templates = {
-  simple: {
-    name: 'Simple Web App',
-    yaml: `entities:
+// Templates will be loaded from the Go WASM backend
+const templates: Record<string, any> = {};
+
+export default function YamlEditor({ value, onChange, style, onTogglePane, isExpanded, canExpand, onViewDiagram, templates }: YamlEditorProps) {
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [availableTemplates, setAvailableTemplates] = useState<Record<string, any>>({});
+
+  // Update available templates when templates prop changes
+  useEffect(() => {
+    if (templates && Object.keys(templates).length > 0) {
+      setAvailableTemplates(templates);
+    } else {
+      // Fallback templates if none are loaded
+      setAvailableTemplates({
+        simple: {
+          name: 'Simple Web App',
+          description: 'A basic web application with client, server, and database',
+          yaml: `entities:
   - id: Client
     category: USER_FACING
     description: "Web browser client"
@@ -28,8 +46,6 @@ const templates = {
     status: healthy
     owner: ops
     environment: production
-    attributes:
-      language: Go
 
   - id: Database
     category: DATABASE
@@ -37,8 +53,6 @@ const templates = {
     status: degraded
     owner: ops
     environment: production
-    attributes:
-      engine: SQLite
 
 connections:
   - from: Client
@@ -47,137 +61,64 @@ connections:
   - from: WebServer
     to: Database
     type: DB_Connection`
-  },
-  webapp: {
-    name: 'Web Application',
-    yaml: `entities:
+        },
+        webapp: {
+          name: 'Web Application',
+          description: 'A full-stack web application with frontend, backend, and database',
+          yaml: `entities:
   - id: User
     category: USER_FACING
-    description: "End user accessing the web app"
+    description: "End user"
     status: healthy
-    owner: product
-    environment: production
-    tags: [external]
 
-  - id: WebServer
+  - id: Frontend
     category: FRONTEND
-    description: "Static web server"
+    description: "React application"
     status: healthy
-    owner: frontend-team
-    environment: production
-    tags: [critical]
-    attributes:
-      framework: Nginx
 
-  - id: APIServer
+  - id: Backend
     category: BACKEND
-    description: "REST API backend"
+    description: "API server"
     status: healthy
-    owner: backend-team
-    environment: production
-    tags: [critical]
-    attributes:
-      language: Python
 
   - id: Database
     category: DATABASE
-    description: "PostgreSQL database"
+    description: "PostgreSQL"
     status: healthy
-    owner: data-team
-    environment: production
-    attributes:
-      engine: PostgreSQL
 
 connections:
   - from: User
-    to: WebServer
+    to: Frontend
     type: HTTP_Request
-  - from: WebServer
-    to: APIServer
+  - from: Frontend
+    to: Backend
     type: API_Call
-  - from: APIServer
+  - from: Backend
     to: Database
     type: DB_Connection`
-  },
-  microservices: {
-    name: 'Microservices',
-    yaml: `entities:
-  - id: APIGateway
-    category: NETWORK
-    description: "Entry point for all services"
-    status: healthy
-    owner: platform-team
-    environment: production
-
-  - id: UserService
-    category: BACKEND
-    description: "User management microservice"
-    status: healthy
-    owner: user-team
-    environment: production
-    attributes:
-      language: Java
-
-  - id: OrderService
-    category: BACKEND
-    description: "Order processing service"
-    status: degraded
-    owner: order-team
-    environment: production
-    attributes:
-      language: Go
-
-  - id: PaymentService
-    category: BACKEND
-    description: "Payment processing service"
-    status: down
-    owner: payment-team
-    environment: production
-    tags: [critical]
-    attributes:
-      language: Python
-
-  - id: UserDB
-    category: DATABASE
-    description: "User data PostgreSQL"
-    status: healthy
-    owner: user-team
-    environment: production
-
-  - id: OrderDB
-    category: DATABASE
-    description: "Order data MongoDB"
-    status: healthy
-    owner: order-team
-    environment: production
-
-connections:
-  - from: APIGateway
-    to: UserService
-    type: Service_Call
-  - from: APIGateway
-    to: OrderService
-    type: Service_Call
-  - from: APIGateway
-    to: PaymentService
-    type: Service_Call
-  - from: UserService
-    to: UserDB
-    type: DB_Connection
-  - from: OrderService
-    to: OrderDB
-    type: DB_Connection`
-  }
-};
-
-export default function YamlEditor({ value, onChange, style, onTogglePane, isExpanded, canExpand, onViewDiagram }: YamlEditorProps) {
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+        }
+      });
+    }
+  }, [templates]);
 
   const handleTemplateSelect = (template: any) => {
     onChange(template.yaml);
-    setShowTemplates(false);
+    setSelectedTemplate(template.name);
+    setShowTemplateModal(false);
   };
+
+  const getCurrentTemplateName = () => {
+    if (!value.trim()) return null;
+    
+    for (const [key, template] of Object.entries(availableTemplates)) {
+      if (template.yaml && template.yaml.trim() === value.trim()) {
+        return template.name || key;
+      }
+    }
+    return null;
+  };
+
+  const currentTemplateName = selectedTemplate || getCurrentTemplateName();
 
   return (
     <KeyboardAvoidingView 
@@ -188,11 +129,18 @@ export default function YamlEditor({ value, onChange, style, onTogglePane, isExp
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>📝 YAML Input</Text>
+          {currentTemplateName && (
+            <View style={styles.templateIndicator}>
+              <Text style={styles.templateIndicatorText}>📋 {currentTemplateName}</Text>
+            </View>
+          )}
         </View>
         <View style={styles.headerControls}>
           <TouchableOpacity
             style={styles.templateButton}
-            onPress={() => setShowTemplates(!showTemplates)}
+            onPress={() => {
+              setShowTemplateModal(true);
+            }}
           >
             <Text style={styles.templateButtonText}>Templates</Text>
           </TouchableOpacity>
@@ -218,20 +166,6 @@ export default function YamlEditor({ value, onChange, style, onTogglePane, isExp
           )}
         </View>
       </View>
-
-      {showTemplates && (
-        <View style={styles.templateList}>
-          {Object.entries(templates).map(([key, template]) => (
-            <TouchableOpacity
-              key={key}
-              style={styles.templateItem}
-              onPress={() => handleTemplateSelect(template)}
-            >
-              <Text style={styles.templateItemText}>{template.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
 
       <View style={styles.editorContainer}>
         {Platform.OS === 'web' && !isEditing && value.trim() ? (
@@ -281,6 +215,13 @@ export default function YamlEditor({ value, onChange, style, onTogglePane, isExp
           </TouchableOpacity>
         </View>
       )}
+
+      <TemplateModal
+        visible={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        onSelectTemplate={handleTemplateSelect}
+        templates={availableTemplates}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -306,6 +247,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
+  },
+  templateIndicator: {
+    marginTop: 4,
+  },
+  templateIndicatorText: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontStyle: 'italic',
   },
   headerControls: {
     flexDirection: 'row',
@@ -347,20 +296,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  templateList: {
-    backgroundColor: '#f3f4f6',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  templateItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  templateItemText: {
-    color: '#374151',
-    fontSize: 14,
   },
   editorContainer: {
     flex: 1,

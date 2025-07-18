@@ -4,12 +4,16 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"strings"
 	"syscall/js"
 
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed templates/*.yml
+var templateFiles embed.FS
 
 // Helper function
 func min(a, b int) int {
@@ -28,7 +32,7 @@ type Entity struct {
 	Owner            string                 `json:"owner" yaml:"owner"`
 	Environment      string                 `json:"environment" yaml:"environment"`
 	Tags             []string               `json:"tags" yaml:"tags"`
-	Attributes       map[string]string      `json:"attributes" yaml:"attributes"`
+	Attributes       map[string]interface{} `json:"attributes" yaml:"attributes"`
 	DeploymentConfig map[string]interface{} `json:"deployment_config" yaml:"deployment_config"`
 	Shape            string                 `json:"shape" yaml:"shape"`
 	Icon             string                 `json:"icon" yaml:"icon"`
@@ -212,157 +216,32 @@ func getTemplates(this js.Value, args []js.Value) interface{} {
 
 	fmt.Println("getTemplates called")
 
-	// Return embedded templates (simplified versions)
-	templates := map[string]string{
-		"simple": `entities:
-  - id: Client
-    category: USER_FACING
-    description: "Web browser client"
-    status: healthy
-    owner: frontend
-    environment: production
+	// Read templates from embedded files
+	templates := make(map[string]string)
 
-  - id: WebServer
-    category: FRONTEND
-    description: "Simple web server"
-    status: healthy
-    owner: ops
-    environment: production
-    attributes:
-      language: Go
+	// Get all template files
+	entries, err := templateFiles.ReadDir("templates")
+	if err != nil {
+		fmt.Printf("Error reading templates directory: %v\n", err)
+		return map[string]interface{}{
+			"error": fmt.Sprintf("Failed to read templates: %v", err),
+		}
+	}
 
-  - id: Database
-    category: DATABASE
-    description: "SQLite database"
-    status: degraded
-    owner: ops
-    environment: production
-    attributes:
-      engine: SQLite
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".yml") {
+			// Read template file
+			content, err := templateFiles.ReadFile("templates/" + entry.Name())
+			if err != nil {
+				fmt.Printf("Error reading template %s: %v\n", entry.Name(), err)
+				continue
+			}
 
-connections:
-  - from: Client
-    to: WebServer
-    type: HTTP_Request
-  - from: WebServer
-    to: Database
-    type: DB_Connection`,
-
-		"webapp": `entities:
-  - id: User
-    category: USER_FACING
-    description: "End user accessing the web app"
-    status: healthy
-    owner: product
-    environment: production
-    tags: [external]
-
-  - id: WebServer
-    category: FRONTEND
-    description: "Static web server"
-    status: healthy
-    owner: frontend-team
-    environment: production
-    tags: [critical]
-    attributes:
-      framework: Nginx
-
-  - id: APIServer
-    category: BACKEND
-    description: "REST API backend"
-    status: healthy
-    owner: backend-team
-    environment: production
-    tags: [critical]
-    attributes:
-      language: Python
-
-  - id: Database
-    category: DATABASE
-    description: "PostgreSQL database"
-    status: healthy
-    owner: data-team
-    environment: production
-    attributes:
-      engine: PostgreSQL
-
-connections:
-  - from: User
-    to: WebServer
-    type: HTTP_Request
-  - from: WebServer
-    to: APIServer
-    type: API_Call
-  - from: APIServer
-    to: Database
-    type: DB_Connection`,
-
-		"microservices": `entities:
-  - id: APIGateway
-    category: NETWORK
-    description: "Entry point for all services"
-    status: healthy
-    owner: platform-team
-    environment: production
-
-  - id: UserService
-    category: BACKEND
-    description: "User management microservice"
-    status: healthy
-    owner: user-team
-    environment: production
-    attributes:
-      language: Java
-
-  - id: OrderService
-    category: BACKEND
-    description: "Order processing service"
-    status: degraded
-    owner: order-team
-    environment: production
-    attributes:
-      language: Go
-
-  - id: PaymentService
-    category: BACKEND
-    description: "Payment processing service"
-    status: down
-    owner: payment-team
-    environment: production
-    tags: [critical]
-    attributes:
-      language: Python
-
-  - id: UserDB
-    category: DATABASE
-    description: "User data PostgreSQL"
-    status: healthy
-    owner: user-team
-    environment: production
-
-  - id: OrderDB
-    category: DATABASE
-    description: "Order data MongoDB"
-    status: healthy
-    owner: order-team
-    environment: production
-
-connections:
-  - from: APIGateway
-    to: UserService
-    type: Service_Call
-  - from: APIGateway
-    to: OrderService
-    type: Service_Call
-  - from: APIGateway
-    to: PaymentService
-    type: Service_Call
-  - from: UserService
-    to: UserDB
-    type: DB_Connection
-  - from: OrderService
-    to: OrderDB
-    type: DB_Connection`,
+			// Extract template name (remove .yml extension)
+			templateName := strings.TrimSuffix(entry.Name(), ".yml")
+			templates[templateName] = string(content)
+			fmt.Printf("Loaded template: %s\n", templateName)
+		}
 	}
 
 	fmt.Printf("getTemplates returning %d templates\n", len(templates))

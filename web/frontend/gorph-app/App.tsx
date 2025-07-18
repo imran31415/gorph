@@ -42,6 +42,7 @@ export default function App() {
   const [svgOutput, setSvgOutput] = useState('');
   const [activeTab, setActiveTab] = useState<'yaml' | 'dot' | 'diagram'>('yaml');
   const [isLandscape, setIsLandscape] = useState(false);
+  const [templates, setTemplates] = useState<Record<string, any>>({});
   
   // Validation states for each pane
   type ValidationStatus = 'valid' | 'invalid' | 'pending' | 'empty';
@@ -133,6 +134,7 @@ export default function App() {
   const handleBridgeReady = () => {
     console.log(`${useSimpleBridge ? 'Simple' : 'Runtime WASM'} bridge ready`);
     setWasmError(''); // Clear any error messages
+    loadTemplates();
     loadDefaultTemplate();
   };
 
@@ -147,6 +149,159 @@ export default function App() {
     } else {
       setWasmError(`Bridge error: ${error}`);
     }
+  };
+
+  // Load templates from WASM backend
+  const loadTemplates = async () => {
+    try {
+      console.log('Loading templates...');
+      let templateData: Record<string, string> = {};
+      
+      if (Platform.OS === 'web' && typeof window.getTemplates === 'function') {
+        console.log('Web platform: calling window.getTemplates()');
+        templateData = window.getTemplates();
+        console.log('Web platform: getTemplates returned:', Object.keys(templateData));
+      } else if (Platform.OS !== 'web' && wasmBridgeRef.current) {
+        console.log('Mobile platform: calling wasmBridge.getTemplates()');
+        templateData = await wasmBridgeRef.current.getTemplates();
+        console.log('Mobile platform: getTemplates returned:', Object.keys(templateData));
+      } else {
+        console.log('No template source available, using fallback');
+      }
+      
+      // Convert raw YAML strings to template objects with metadata
+      const processedTemplates: Record<string, any> = {};
+      for (const [key, yaml] of Object.entries(templateData)) {
+        processedTemplates[key] = {
+          name: getTemplateDisplayName(key),
+          description: getTemplateDescription(key),
+          yaml: yaml
+        };
+      }
+      
+      if (Object.keys(processedTemplates).length > 0) {
+        setTemplates(processedTemplates);
+        console.log(`Successfully loaded ${Object.keys(processedTemplates).length} templates:`, Object.keys(processedTemplates));
+      } else {
+        console.log('No templates loaded, using fallback');
+        // Set fallback templates
+        setTemplates({
+          simple: {
+            name: 'Simple Web App',
+            description: 'A basic web application with client, server, and database',
+            yaml: getFallbackTemplate()
+          },
+          webapp: {
+            name: 'Web Application',
+            description: 'A full-stack web application with frontend, backend, and database',
+            yaml: `entities:
+  - id: User
+    category: USER_FACING
+    description: "End user"
+    status: healthy
+
+  - id: Frontend
+    category: FRONTEND
+    description: "React application"
+    status: healthy
+
+  - id: Backend
+    category: BACKEND
+    description: "API server"
+    status: healthy
+
+  - id: Database
+    category: DATABASE
+    description: "PostgreSQL"
+    status: healthy
+
+connections:
+  - from: User
+    to: Frontend
+    type: HTTP_Request
+  - from: Frontend
+    to: Backend
+    type: API_Call
+  - from: Backend
+    to: Database
+    type: DB_Connection`
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading templates:', error);
+      // Set fallback templates
+      setTemplates({
+        simple: {
+          name: 'Simple Web App',
+          description: 'A basic web application with client, server, and database',
+          yaml: getFallbackTemplate()
+        },
+        webapp: {
+          name: 'Web Application',
+          description: 'A full-stack web application with frontend, backend, and database',
+          yaml: `entities:
+  - id: User
+    category: USER_FACING
+    description: "End user"
+    status: healthy
+
+  - id: Frontend
+    category: FRONTEND
+    description: "React application"
+    status: healthy
+
+  - id: Backend
+    category: BACKEND
+    description: "API server"
+    status: healthy
+
+  - id: Database
+    category: DATABASE
+    description: "PostgreSQL"
+    status: healthy
+
+connections:
+  - from: User
+    to: Frontend
+    type: HTTP_Request
+  - from: Frontend
+    to: Backend
+    type: API_Call
+  - from: Backend
+    to: Database
+    type: DB_Connection`
+        }
+      });
+    }
+  };
+
+  // Helper function to get template display names
+  const getTemplateDisplayName = (key: string): string => {
+    const names: Record<string, string> = {
+      'simple': 'Simple Web App',
+      'webapp': 'Web Application',
+      'microservices': 'Microservices',
+      'data-pipeline': 'Data Pipeline',
+      'deploy': 'Deployment Pipeline',
+      'infra': 'Infrastructure',
+      'gorph-app': 'Gorph Application'
+    };
+    return names[key] || key.charAt(0).toUpperCase() + key.slice(1);
+  };
+
+  // Helper function to get template descriptions
+  const getTemplateDescription = (key: string): string => {
+    const descriptions: Record<string, string> = {
+      'simple': 'A basic web application with client, server, and database',
+      'webapp': 'A full-stack web application with frontend, backend, and database',
+      'microservices': 'A microservices architecture with API gateway and multiple services',
+      'data-pipeline': 'A data processing pipeline with ETL, streaming, and ML components',
+      'deploy': 'A CI/CD deployment pipeline with GitOps and Kubernetes',
+      'infra': 'A comprehensive infrastructure setup with multiple environments',
+      'gorph-app': 'The architecture of this Gorph infrastructure visualization tool'
+    };
+    return descriptions[key] || 'Infrastructure template';
   };
 
   // Process YAML when input changes
@@ -199,7 +354,7 @@ export default function App() {
             setValidationStates(prev => ({
               yaml: 'valid',
               dot: 'valid',
-              diagram: prev.diagram // Will be set by generateSVG
+              diagram: prev.diagram
             }));
             setValidationErrors({
               yaml: null,
@@ -209,8 +364,8 @@ export default function App() {
             generateSVG(result.dot);
           }
         } catch (error) {
-          const errorMsg = `Error: ${error}`;
-          setDotOutput(errorMsg);
+          console.error('Error processing YAML:', error);
+          setDotOutput(`Error: ${error}`);
           setSvgOutput('');
           setValidationStates({
             yaml: 'invalid',
@@ -218,16 +373,16 @@ export default function App() {
             diagram: 'invalid'
           });
           setValidationErrors({
-            yaml: errorMsg,
-            dot: errorMsg,
+            yaml: String(error),
+            dot: String(error),
             diagram: 'Cannot generate diagram due to YAML/DOT errors'
           });
         }
       } else {
-        // Use WebView bridge on mobile
+        // Use WebView bridge for mobile
         if (wasmBridgeRef.current) {
           wasmBridgeRef.current.yamlToDot(yamlInput)
-            .then((result) => {
+            .then((result: any) => {
               if (result.error) {
                 setDotOutput(`Error: ${result.error}`);
                 setSvgOutput('');
@@ -246,7 +401,7 @@ export default function App() {
                 setValidationStates(prev => ({
                   yaml: 'valid',
                   dot: 'valid',
-                  diagram: prev.diagram // Will be set by generateSVG
+                  diagram: prev.diagram
                 }));
                 setValidationErrors({
                   yaml: null,
@@ -256,9 +411,9 @@ export default function App() {
                 generateSVG(result.dot);
               }
             })
-            .catch((error) => {
-              const errorMsg = `Error: ${error}`;
-              setDotOutput(errorMsg);
+            .catch((error: any) => {
+              console.error('Error processing YAML via bridge:', error);
+              setDotOutput(`Error: ${error}`);
               setSvgOutput('');
               setValidationStates({
                 yaml: 'invalid',
@@ -266,30 +421,30 @@ export default function App() {
                 diagram: 'invalid'
               });
               setValidationErrors({
-                yaml: errorMsg,
-                dot: errorMsg,
+                yaml: String(error),
+                dot: String(error),
                 diagram: 'Cannot generate diagram due to YAML/DOT errors'
               });
             });
         } else {
-          // Fallback to simple converter if bridge not ready
+          // Fallback to simple parser
           try {
-            const dotResult = simpleMobileYamlToDot(yamlInput);
-            setDotOutput(dotResult);
-            setValidationStates({
+            const dotCode = simpleMobileYamlToDot(yamlInput);
+            setDotOutput(dotCode);
+            setValidationStates(prev => ({
               yaml: 'valid',
               dot: 'valid',
-              diagram: 'valid' // Simple converter doesn't generate diagrams
-            });
+              diagram: prev.diagram
+            }));
             setValidationErrors({
               yaml: null,
               dot: null,
               diagram: null
             });
-            setSvgOutput('');
+            generateSVG(dotCode);
           } catch (error) {
-            const errorMsg = `Error: ${error}`;
-            setDotOutput(errorMsg);
+            console.error('Error in simple parser:', error);
+            setDotOutput(`Error: ${error}`);
             setSvgOutput('');
             setValidationStates({
               yaml: 'invalid',
@@ -297,8 +452,8 @@ export default function App() {
               diagram: 'invalid'
             });
             setValidationErrors({
-              yaml: errorMsg,
-              dot: errorMsg,
+              yaml: String(error),
+              dot: String(error),
               diagram: 'Cannot generate diagram due to YAML/DOT errors'
             });
           }
@@ -364,20 +519,21 @@ export default function App() {
       const checkFunctions = () => {
         console.log(`Checking for WASM functions (attempt ${attempts + 1})...`);
         console.log('Available functions:', {
-          yamlToDot: !!window.yamlToDot,
-          validateYaml: !!window.validateYaml,
-          getTemplates: !!window.getTemplates
+          yamlToDot: typeof window.yamlToDot === 'function',
+          validateYaml: typeof window.validateYaml === 'function',
+          getTemplates: typeof window.getTemplates === 'function'
         });
         
-        if (window.yamlToDot && window.validateYaml && window.getTemplates) {
+        if (typeof window.yamlToDot === 'function' && typeof window.validateYaml === 'function' && typeof window.getTemplates === 'function') {
           console.log('All WASM functions available!');
           setWasmLoaded(true);
+          loadTemplates();
           loadDefaultTemplate();
         } else if (attempts < maxAttempts) {
           attempts++;
           setTimeout(checkFunctions, 100);
         } else {
-          const error = `WASM functions not available after ${maxAttempts} attempts. Available: yamlToDot=${!!window.yamlToDot}, validateYaml=${!!window.validateYaml}, getTemplates=${!!window.getTemplates}`;
+          const error = `WASM functions not available after ${maxAttempts} attempts. Available: yamlToDot=${typeof window.yamlToDot === 'function'}, validateYaml=${typeof window.validateYaml === 'function'}, getTemplates=${typeof window.getTemplates === 'function'}`;
           console.error(error);
           setWasmError(error);
         }
@@ -387,7 +543,7 @@ export default function App() {
       
     } catch (error) {
       console.error('WASM loading error:', error);
-      setWasmError(`WASM loading failed: ${error.message || error}`);
+      setWasmError(`WASM loading failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -611,7 +767,9 @@ connections:
               onChange={setYamlInput}
               style={styles.fullPane}
               onViewDiagram={() => setActiveTab('diagram')}
+              templates={templates}
             />
+            
           )}
           
           {activeTab === 'dot' && (
@@ -718,6 +876,7 @@ connections:
               isExpanded={visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram}
               canExpand={visiblePanes.dot || visiblePanes.diagram}
               onViewDiagram={maximizeDiagram}
+              templates={templates}
             />
           </Animated.View>
         )}
