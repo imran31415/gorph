@@ -17,40 +17,28 @@ interface YamlEditorProps {
 // Templates will be loaded from the Go WASM backend
 const templates: Record<string, any> = {};
 
-// Isolated text editor component that prevents re-render issues
-// Create a stable reference to prevent re-renders
-let globalChangeCallback: ((value: string) => void) | null = null;
-
-const TrulyIsolatedEditor = memo(() => {
-  const [localValue, setLocalValue] = useState('');
-  const textInputRef = useRef<TextInput>(null);
+// Simple stable text editor component
+const SimpleTextEditor = memo(({ initialValue, onChange, isMobile, isVeryNarrow, height }: {
+  initialValue: string;
+  onChange: (value: string) => void;
+  isMobile: boolean;
+  isVeryNarrow: boolean;
+  height: number;
+}) => {
+  const [localValue, setLocalValue] = useState(initialValue);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const initializeRef = useRef<((value: string) => void) | null>(null);
+  const isTypingRef = useRef(false);
 
-  // Initialize method that can be called from parent
+  // Update local value when initial value changes (like from templates), but not while typing
   useEffect(() => {
-    (window as any).yamlEditorController = {
-      setValue: (value: string) => {
-        console.log('🎯 TrulyIsolatedEditor: setValue called with:', value?.substring(0, 50) + '...');
-        console.log('🎯 TrulyIsolatedEditor: New content lines:', (value || '').split('\n').length);
-        if (localValue === '' || localValue !== value) {
-          console.log('🎯 TrulyIsolatedEditor: Actually setting value');
-          setLocalValue(value || ''); // Ensure we handle undefined/null
-        } else {
-          console.log('🎯 TrulyIsolatedEditor: Skipping setValue - same value');
-        }
-      },
-      getValue: () => localValue,
-      setChangeCallback: (callback: (value: string) => void) => {
-        console.log('🎯 TrulyIsolatedEditor: setChangeCallback called');
-        globalChangeCallback = callback;
-      }
-    };
-  }, [localValue]);
+    if (initialValue !== localValue && !isTypingRef.current) {
+      setLocalValue(initialValue);
+    }
+  }, [initialValue, localValue]);
 
   const handleTextChange = useCallback((text: string) => {
-    console.log('✏️ TrulyIsolatedEditor: Text changed, new length:', text.length, 'lines:', text.split('\n').length);
     setLocalValue(text);
+    isTypingRef.current = true;
     
     // Clear existing timeout
     if (timeoutRef.current) {
@@ -59,11 +47,10 @@ const TrulyIsolatedEditor = memo(() => {
     
     // Debounce callback to parent
     timeoutRef.current = setTimeout(() => {
-      if (globalChangeCallback) {
-        globalChangeCallback(text);
-      }
+      onChange(text);
+      isTypingRef.current = false; // Allow parent updates again after save
     }, 300);
-  }, []);
+  }, [onChange]);
 
   useEffect(() => {
     return () => {
@@ -73,57 +60,15 @@ const TrulyIsolatedEditor = memo(() => {
     };
   }, []);
 
-  // Get screen dimensions for responsive sizing
-  const { width, height } = Dimensions.get('window');
-  const isMobile = width < 768;
-  const isVeryNarrow = width < 480;
-
-  // Calculate dynamic height based on content
-  const calculateDynamicHeight = () => {
-    const content = localValue || '';
-    const lines = content.split('\n');
-    // For empty content, show placeholder height. For content, ensure minimum of 8 lines visible.
-    const contentLineCount = lines.length;
-    const minDisplayLines = content.trim() === '' ? 8 : 8; // Show 8 lines minimum always
-    const lineCount = Math.max(contentLineCount, minDisplayLines);
-    
-    const lineHeight = isVeryNarrow ? 20 : (isMobile ? 24 : 22);
-    const padding = isVeryNarrow ? 24 : (isMobile ? 32 : 32); // Top + bottom padding
-    const calculatedHeight = (lineCount * lineHeight) + padding;
-    
-    // Set reasonable bounds
-    const minHeight = isVeryNarrow ? 180 : (isMobile ? 220 : 250);
-    const maxHeight = height * 0.75; // Don't exceed 75% of screen height
-    
-    const finalHeight = Math.min(Math.max(calculatedHeight, minHeight), maxHeight);
-    
-    console.log('📏 Dynamic height calc:', {
-      contentLength: content.length,
-      contentLineCount,
-      displayLineCount: lineCount,
-      lineHeight,
-      calculatedHeight,
-      finalHeight,
-      isMobile,
-      isVeryNarrow,
-      isEmpty: content.trim() === ''
-    });
-    
-    return finalHeight;
-  };
-
-  const dynamicHeight = calculateDynamicHeight();
-
   return (
     <TextInput
-      ref={textInputRef}
       style={[
         styles.textInput,
         {
           fontSize: isMobile ? 14 : 16,
           lineHeight: isVeryNarrow ? 20 : (isMobile ? 24 : 22),
-          minHeight: dynamicHeight,
-          height: dynamicHeight, // Set explicit height to match minHeight
+          minHeight: height,
+          height: height,
         },
       ]}
       value={localValue}
@@ -186,30 +131,7 @@ export default function YamlEditor({ value, onChange, style, onTogglePane, onMin
     }
   }, [shouldAlwaysEdit]);
 
-  // Initialize the isolated editor when component mounts
-  useEffect(() => {
-    if ((window as any).yamlEditorController) {
-      // Set initial value
-      (window as any).yamlEditorController.setValue(value || '');
-      
-      // Set change callback
-      (window as any).yamlEditorController.setChangeCallback((newValue: string) => {
-        onChange(newValue);
-      });
-    }
-  }, []);
-
-  // Update value from parent when it changes (from templates, etc.)
-  // Use a ref to track the last value we set to prevent loops
-  const lastParentValueRef = useRef<string>('');
-  
-  useEffect(() => {
-    if ((window as any).yamlEditorController && value !== undefined && value !== lastParentValueRef.current) {
-      console.log('📝 YamlEditor: Updating from parent value change:', value?.substring(0, 50) + '...');
-      lastParentValueRef.current = value;
-      (window as any).yamlEditorController.setValue(value);
-    }
-  }, [value]);
+  // No complex controller needed - SimpleTextEditor handles everything directly
 
   // Update available templates when templates prop changes
   useEffect(() => {
@@ -396,8 +318,13 @@ connections:
             </TouchableOpacity>
           </ScrollView>
         ) : (
-          <TrulyIsolatedEditor
-            key="yaml-editor-isolated" // Stable key to prevent remounting
+          <SimpleTextEditor
+            key="yaml-editor-simple" // Stable key to prevent remounting
+            initialValue={value || ''}
+            onChange={onChange}
+            isMobile={isMobile}
+            isVeryNarrow={isVeryNarrow}
+            height={isVeryNarrow ? screenData.height * 0.4 : isMobile ? screenData.height * 0.5 : 400}
           />
         )}
       </View>
