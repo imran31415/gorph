@@ -259,6 +259,12 @@ func getTemplates(this js.Value, args []js.Value) interface{} {
 	return jsObject
 }
 
+// sanitizeIDForDOT converts dashes to underscores for GraphViz compatibility
+// while preserving the original ID for display purposes
+func sanitizeIDForDOT(id string) string {
+	return strings.ReplaceAll(id, "-", "_")
+}
+
 // Generate DOT output from infrastructure
 func generateDOT(infra *Infrastructure, style *StyleConfig) string {
 	var sb strings.Builder
@@ -315,6 +321,9 @@ func generateEntityNode(sb *strings.Builder, entity Entity, style *StyleConfig) 
 
 	statusColor := getStatusColor(entity.Status, style)
 
+	// Sanitize ID for DOT node identifier, but keep original ID in label
+	sanitizedID := sanitizeIDForDOT(entity.ID)
+
 	sb.WriteString(fmt.Sprintf(`    %s [label=<
       <TABLE BORDER="%d" CELLBORDER="%d" CELLSPACING="%d">
         <TR><TD><B>%s</B></TD></TR>
@@ -322,11 +331,11 @@ func generateEntityNode(sb *strings.Builder, entity Entity, style *StyleConfig) 
         <TR><TD BGCOLOR="%s" HEIGHT="%d"></TD></TR>
       </TABLE>
     >];
-`, entity.ID,
+`, sanitizedID,
 		style.Node.BorderWidth,
 		style.Node.CellBorder,
 		style.Node.CellSpacing,
-		entity.ID,
+		entity.ID, // Keep original ID in the display label
 		description,
 		statusColor,
 		style.Node.StatusBarHeight))
@@ -342,8 +351,12 @@ func getStatusColor(status string, style *StyleConfig) string {
 func generateConnection(sb *strings.Builder, conn Connection, style *StyleConfig) {
 	edgeAttrs := getConnectionAttributes(conn.Type, style)
 
+	// Sanitize both From and To IDs for DOT compatibility
+	sanitizedFrom := sanitizeIDForDOT(conn.From)
+	sanitizedTo := sanitizeIDForDOT(conn.To)
+
 	sb.WriteString(fmt.Sprintf("  %s -> %s [label=\"%s\"%s];\n",
-		conn.From, conn.To, conn.Type, edgeAttrs))
+		sanitizedFrom, sanitizedTo, conn.Type, edgeAttrs))
 }
 
 func getConnectionAttributes(connType string, style *StyleConfig) string {
@@ -369,10 +382,10 @@ func getConnectionAttributes(connType string, style *StyleConfig) string {
 	return ", " + strings.Join(attrs, ", ")
 }
 
-// isValidEntityID validates that an entity ID follows GraphViz-compatible naming rules
+// isValidEntityID validates that an entity ID follows basic naming rules
 // - Must start with a letter (a-z, A-Z)
-// - Can contain letters, numbers, and underscores
-// - Cannot contain dashes (hyphens) as they cause GraphViz rendering issues
+// - Can contain letters, numbers, underscores, and dashes
+// - Dashes will be automatically converted to underscores for GraphViz compatibility
 func isValidEntityID(id string) bool {
 	if len(id) == 0 {
 		return false
@@ -383,13 +396,14 @@ func isValidEntityID(id string) bool {
 		return false
 	}
 
-	// Check remaining characters
+	// Check remaining characters - now allowing dashes
 	for i := 1; i < len(id); i++ {
 		char := id[i]
 		if !((char >= 'a' && char <= 'z') ||
 			(char >= 'A' && char <= 'Z') ||
 			(char >= '0' && char <= '9') ||
-			char == '_') {
+			char == '_' ||
+			char == '-') { // Now allowing dashes
 			return false
 		}
 	}
@@ -413,9 +427,9 @@ func validateInfrastructure(infra *Infrastructure) []string {
 			continue
 		}
 
-		// Validate ID format - no dashes allowed for GraphViz compatibility
+		// Validate ID format
 		if !isValidEntityID(entity.ID) {
-			errors = append(errors, fmt.Sprintf("Entity %s: ID contains invalid characters. IDs must start with a letter and contain only letters, numbers, and underscores. Dashes are not allowed due to GraphViz compatibility requirements.", entity.ID))
+			errors = append(errors, fmt.Sprintf("Entity %s: ID contains invalid characters. IDs must start with a letter and contain only letters, numbers, underscores, and dashes. Dashes will be automatically converted to underscores for GraphViz compatibility.", entity.ID))
 		}
 
 		if entityIds[entity.ID] {
@@ -442,7 +456,7 @@ func validateInfrastructure(infra *Infrastructure) []string {
 			errors = append(errors, fmt.Sprintf("Connection %d: From is required", i))
 		} else {
 			if !isValidEntityID(conn.From) {
-				errors = append(errors, fmt.Sprintf("Connection %d: From entity ID '%s' contains invalid characters. IDs must start with a letter and contain only letters, numbers, and underscores.", i, conn.From))
+				errors = append(errors, fmt.Sprintf("Connection %d: From entity ID '%s' contains invalid characters. IDs must start with a letter and contain only letters, numbers, underscores, and dashes.", i, conn.From))
 			}
 			if !entityIds[conn.From] {
 				errors = append(errors, fmt.Sprintf("Connection %d: From entity '%s' does not exist", i, conn.From))
@@ -453,7 +467,7 @@ func validateInfrastructure(infra *Infrastructure) []string {
 			errors = append(errors, fmt.Sprintf("Connection %d: To is required", i))
 		} else {
 			if !isValidEntityID(conn.To) {
-				errors = append(errors, fmt.Sprintf("Connection %d: To entity ID '%s' contains invalid characters. IDs must start with a letter and contain only letters, numbers, and underscores.", i, conn.To))
+				errors = append(errors, fmt.Sprintf("Connection %d: To entity ID '%s' contains invalid characters. IDs must start with a letter and contain only letters, numbers, underscores, and dashes.", i, conn.To))
 			}
 			if !entityIds[conn.To] {
 				errors = append(errors, fmt.Sprintf("Connection %d: To entity '%s' does not exist", i, conn.To))

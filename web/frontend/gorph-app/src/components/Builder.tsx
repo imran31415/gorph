@@ -388,10 +388,10 @@ export default function Builder({ yamlContent, onYamlChange, svgOutput, dotOutpu
       return;
     }
 
-    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(entityForm.id.trim())) {
+    if (!/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(entityForm.id.trim())) {
       Alert.alert(
         'Validation Error', 
-        'Entity ID must start with a letter and contain only letters, numbers, and underscores. Dashes are not allowed due to GraphViz compatibility requirements.',
+        'Entity ID must start with a letter and contain only letters, numbers, underscores, and dashes. Dashes will be automatically converted to underscores for GraphViz compatibility.',
         [{ text: 'OK' }]
       );
       return;
@@ -894,8 +894,8 @@ const EntityForm = ({ entityForm, setEntityForm, onSave, onCancel }: any) => {
     
     if (!entityForm.id.trim()) {
       newErrors.id = 'Entity ID is required';
-    } else if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(entityForm.id.trim())) {
-      newErrors.id = 'ID must start with a letter and contain only letters, numbers, and underscores. Dashes are not allowed due to GraphViz compatibility.';
+    } else if (!/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(entityForm.id.trim())) {
+      newErrors.id = 'ID must start with a letter and contain only letters, numbers, underscores, and dashes. Dashes will be automatically converted to underscores for GraphViz compatibility.';
     }
     
     if (!entityForm.description.trim()) {
