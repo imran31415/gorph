@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Modal,
   TextInput,
-  Alert,
   ScrollView,
   Dimensions,
 } from 'react-native';
@@ -46,6 +45,7 @@ export default function DiagramHeader({ onShowHistory, onTemplatePress }: Diagra
   const [newDiagramName, setNewDiagramName] = useState('');
   const [renameName, setRenameName] = useState('');
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
 
   // Track screen width for responsive layout
@@ -77,19 +77,14 @@ export default function DiagramHeader({ onShowHistory, onTemplatePress }: Diagra
   };
 
   const handleDeleteDiagram = (diagramId: string) => {
-    const diagram = session.diagrams[diagramId];
-    Alert.alert(
-      'Delete Diagram',
-      `Are you sure you want to delete "${diagram.name}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteDiagram(diagramId),
-        },
-      ]
-    );
+    setShowDeleteConfirm(diagramId);
+  };
+
+  const confirmDeleteDiagram = () => {
+    if (showDeleteConfirm) {
+      deleteDiagram(showDeleteConfirm);
+      setShowDeleteConfirm(null);
+    }
   };
 
   const formatTimestamp = (timestamp: number) => {
@@ -313,6 +308,40 @@ export default function DiagramHeader({ onShowHistory, onTemplatePress }: Diagra
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveButton} onPress={handleRenameDiagram}>
                 <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={!!showDeleteConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeleteConfirm(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModal}>
+            <Text style={styles.confirmTitle}>⚠️ Delete Diagram</Text>
+            <Text style={styles.confirmMessage}>
+              Are you sure you want to delete "{showDeleteConfirm ? session.diagrams[showDeleteConfirm]?.name : ''}"?
+            </Text>
+            <Text style={styles.confirmWarning}>
+              This action cannot be undone.
+            </Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                style={styles.confirmCancelButton}
+                onPress={() => setShowDeleteConfirm(null)}
+              >
+                <Text style={styles.confirmCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmDeleteButton}
+                onPress={confirmDeleteDiagram}
+              >
+                <Text style={styles.confirmDeleteButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -903,6 +932,74 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   tipBold: {
+    fontWeight: '600',
+  },
+  
+  // Confirmation Modal Styles
+  confirmModal: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    margin: 20,
+    width: '85%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#dc2626',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  confirmMessage: {
+    fontSize: 16,
+    color: '#374151',
+    marginBottom: 8,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  confirmWarning: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 24,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  confirmButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  confirmCancelButton: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  confirmCancelButtonText: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  confirmDeleteButton: {
+    flex: 1,
+    backgroundColor: '#dc2626',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmDeleteButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
     fontWeight: '600',
   },
 }); 

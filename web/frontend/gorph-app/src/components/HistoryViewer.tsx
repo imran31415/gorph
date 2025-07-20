@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { useDiagramState, DiagramChange } from './DiagramStateManager';
 import { ideTheme } from '../theme/ideTheme';
@@ -28,6 +27,7 @@ export default function HistoryViewer({ visible, onClose }: HistoryViewerProps) 
   } = useDiagramState();
 
   const [selectedChange, setSelectedChange] = useState<DiagramChange | null>(null);
+  const [showRevertConfirm, setShowRevertConfirm] = useState<DiagramChange | null>(null);
 
   const history = getChangeHistory();
   const currentIndex = activeDiagram?.currentChangeIndex ?? -1;
@@ -71,21 +71,15 @@ export default function HistoryViewer({ visible, onClose }: HistoryViewerProps) 
   };
 
   const handleRevertToChange = (change: DiagramChange) => {
-    Alert.alert(
-      'Revert to Change',
-      `Are you sure you want to revert to this change? This will update your current diagram.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Revert',
-          style: 'destructive',
-          onPress: () => {
-            revertToChange(change.id);
-            onClose();
-          },
-        },
-      ]
-    );
+    setShowRevertConfirm(change);
+  };
+
+  const confirmRevertToChange = () => {
+    if (showRevertConfirm) {
+      revertToChange(showRevertConfirm.id);
+      setShowRevertConfirm(null);
+      onClose();
+    }
   };
 
   const getDiffStats = (yamlContent: string) => {
@@ -255,6 +249,45 @@ export default function HistoryViewer({ visible, onClose }: HistoryViewerProps) 
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Revert Confirmation Modal */}
+        {showRevertConfirm && (
+          <Modal
+            visible={!!showRevertConfirm}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowRevertConfirm(null)}
+          >
+            <View style={styles.detailModalOverlay}>
+              <View style={styles.confirmModal}>
+                <Text style={styles.confirmTitle}>🔄 Revert to Change</Text>
+                <Text style={styles.confirmMessage}>
+                  Are you sure you want to revert to this change?
+                </Text>
+                <Text style={styles.confirmDetails}>
+                  "{showRevertConfirm.description}"
+                </Text>
+                <Text style={styles.confirmWarning}>
+                  This will update your current diagram and may lose recent changes.
+                </Text>
+                <View style={styles.confirmButtons}>
+                  <TouchableOpacity
+                    style={styles.confirmCancelButton}
+                    onPress={() => setShowRevertConfirm(null)}
+                  >
+                    <Text style={styles.confirmCancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.confirmRevertButton}
+                    onPress={confirmRevertToChange}
+                  >
+                    <Text style={styles.confirmRevertButtonText}>Revert</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
 
         {/* Change Detail Modal */}
         {selectedChange && (
@@ -603,6 +636,81 @@ const styles = StyleSheet.create({
   detailRevertButtonText: {
     color: '#ffffff',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  
+  // Confirmation Modal Styles
+  confirmModal: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    margin: 20,
+    width: '85%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#f59e0b',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  confirmMessage: {
+    fontSize: 16,
+    color: '#374151',
+    marginBottom: 8,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  confirmDetails: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 8,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  confirmWarning: {
+    fontSize: 13,
+    color: '#dc2626',
+    marginBottom: 24,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  confirmButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  confirmCancelButton: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  confirmCancelButtonText: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  confirmRevertButton: {
+    flex: 1,
+    backgroundColor: '#f59e0b',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmRevertButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
     fontWeight: '600',
   },
 }); 
