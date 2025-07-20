@@ -5,11 +5,12 @@ interface DotOutputProps {
   value: string;
   style?: any;
   onTogglePane?: () => void;
+  onMinimizePane?: () => void;
   isExpanded?: boolean;
   canExpand?: boolean;
 }
 
-export default function DotOutput({ value, style, onTogglePane, isExpanded, canExpand }: DotOutputProps) {
+export default function DotOutput({ value, style, onTogglePane, onMinimizePane, isExpanded, canExpand }: DotOutputProps) {
   const copyToClipboard = async () => {
     if (Platform.OS === 'web') {
       try {
@@ -31,7 +32,8 @@ export default function DotOutput({ value, style, onTogglePane, isExpanded, canE
     <View style={[styles.container, style]}>
       <View style={styles.header}>
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>🔗 DOT Output</Text>
+          <Text style={styles.title}>�� DOT Output</Text>
+          <Text style={styles.subtitle}>Technical notation - compiled from YAML for GraphViz</Text>
         </View>
         <View style={styles.headerControls}>
           <TouchableOpacity
@@ -40,13 +42,21 @@ export default function DotOutput({ value, style, onTogglePane, isExpanded, canE
           >
             <Text style={styles.copyButtonText}>Copy</Text>
           </TouchableOpacity>
+          {onMinimizePane && (
+            <TouchableOpacity
+              style={styles.minimizeButton}
+              onPress={onMinimizePane}
+            >
+              <Text style={styles.minimizeButtonText}>−</Text>
+            </TouchableOpacity>
+          )}
           {canExpand && onTogglePane && (
             <TouchableOpacity
               style={styles.expandButton}
               onPress={onTogglePane}
             >
               <Text style={styles.expandButtonText}>
-                {isExpanded ? '-' : '+'}
+                {isExpanded ? '⤓' : '⤢'}
               </Text>
             </TouchableOpacity>
           )}
@@ -95,6 +105,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
   },
+  subtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+  },
   headerControls: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -111,18 +126,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  expandButton: {
-    backgroundColor: '#10b981',
+  minimizeButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
     width: 32,
     height: 32,
-    borderRadius: 6,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 8,
+  },
+  minimizeButtonText: {
+    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  expandButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   expandButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,

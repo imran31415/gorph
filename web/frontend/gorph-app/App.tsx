@@ -1,15 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Dimensions, Platform, ScrollView, Animated, TouchableOpacity, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Header from './src/components/Header';
+import Footer from './src/components/Footer';
 import LoadingScreen from './src/components/LoadingScreen';
 import YamlEditor from './src/components/YamlEditor';
 import DotOutput from './src/components/DotOutput';
 import DiagramViewer from './src/components/DiagramViewer';
+import Builder from './src/components/Builder';
 import WasmBridge, { WasmBridgeRef } from './src/components/WasmBridge';
 import WasmBridgeSimple from './src/components/WasmBridgeSimple';
 import WasmBridgeRuntime from './src/components/WasmBridgeRuntime';
+import { DiagramStateProvider, useDiagramState } from './src/components/DiagramStateManager';
+import DiagramHeader from './src/components/DiagramHeader';
+import HistoryViewer from './src/components/HistoryViewer';
+import OnboardingModal from './src/components/OnboardingModal';
+import TemplateModal from './src/components/TemplateModal';
 
 // WASM interface types
 interface WasmResult {
@@ -34,15 +42,157 @@ declare global {
   }
 }
 
-export default function App() {
+function AppInner() {
   const [wasmLoaded, setWasmLoaded] = useState(false);
   const [wasmError, setWasmError] = useState<string | null>(null);
-  const [yamlInput, setYamlInput] = useState('');
   const [dotOutput, setDotOutput] = useState('');
   const [svgOutput, setSvgOutput] = useState('');
-  const [activeTab, setActiveTab] = useState<'yaml' | 'dot' | 'diagram'>('yaml');
+  const [activeTab, setActiveTab] = useState<'yaml' | 'dot' | 'diagram' | 'builder'>('builder');
   const [isLandscape, setIsLandscape] = useState(false);
   const [templates, setTemplates] = useState<Record<string, any>>({});
+  const [showHistory, setShowHistory] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isFirstTime, setIsFirstTime] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const templateModalStateRef = useRef(false);
+  
+  // Sync ref with state
+  useEffect(() => {
+    templateModalStateRef.current = showTemplateModal;
+  }, [showTemplateModal]);
+  
+  // Debug template modal state changes
+  useEffect(() => {
+    console.log('📋 Template Modal state changed:', showTemplateModal, 'isLandscape:', isLandscape);
+  }, [showTemplateModal, isLandscape]);
+  const initializedRef = useRef(false);
+  // Diagram state management
+  const {
+    activeDiagram,
+    session,
+    createNewDiagram,
+    updateYaml,
+    renameDiagram,
+    switchToDiagram,
+  } = useDiagramState();
+
+  // Get current YAML from active diagram
+  const yamlInput = activeDiagram?.currentYaml || '';
+  
+  // Function to update YAML with change tracking
+  const setYamlInput = (newYaml: string, changeType: 'manual' | 'template' | 'builder' = 'manual', description?: string) => {
+    updateYaml(newYaml, changeType, description || '');
+  };
+
+  // Track diagram count to prevent infinite loops
+  const diagramCount = Object.keys(session.diagrams).length;
+  const prevDiagramCountRef = useRef(diagramCount);
+  
+  // Track onboarding state for diagram switching
+  const onboardingNewDiagramRef = useRef<string | null>(null);
+
+  // Monitor diagram creation during onboarding and ensure proper switching
+  useEffect(() => {
+    if (onboardingNewDiagramRef.current && session.diagrams[onboardingNewDiagramRef.current]) {
+      const expectedDiagramId = onboardingNewDiagramRef.current;
+      
+      console.log('📊 Onboarding: Monitoring diagram creation effect triggered:', {
+        expectedDiagramId,
+        currentActiveDiagramId: session.activeDiagramId,
+        currentActiveDiagramName: activeDiagram?.name,
+        diagramExists: !!session.diagrams[expectedDiagramId],
+        diagramName: session.diagrams[expectedDiagramId]?.name
+      });
+      
+      if (session.activeDiagramId !== expectedDiagramId) {
+        console.log('🔄 Onboarding: useEffect forcing diagram switch to:', expectedDiagramId);
+        switchToDiagram(expectedDiagramId);
+        setActiveTab('diagram');
+      }
+      
+      // Clear the ref once we've handled it
+      onboardingNewDiagramRef.current = null;
+    }
+  }, [session.diagrams, session.activeDiagramId, activeDiagram?.name, switchToDiagram]);
+
+  // Check for first-time user and initialize onboarding
+  useEffect(() => {
+    const checkFirstTimeUser = async () => {
+      try {
+        const hasSeenOnboarding = await AsyncStorage.getItem('gorph_onboarding_completed');
+        const hasExistingDiagrams = diagramCount > 0;
+        
+        console.log('First-time user check:', {
+          hasSeenOnboarding: !!hasSeenOnboarding,
+          hasExistingDiagrams,
+          diagramCount,
+          wasmLoaded,
+          sessionStartTime: session.sessionStartTime
+        });
+        
+        if (!hasSeenOnboarding && !hasExistingDiagrams && wasmLoaded && session.sessionStartTime > 0) {
+          console.log('🎯 Showing onboarding for first-time user');
+          setIsFirstTime(true);
+          setShowOnboarding(true);
+        } else {
+          console.log('❌ Onboarding not shown because:', {
+            hasSeenOnboarding: !!hasSeenOnboarding,
+            hasExistingDiagrams,
+            wasmLoaded,
+            sessionStartTime: session.sessionStartTime
+          });
+        }
+      } catch (error) {
+        console.error('Error checking first-time user:', error);
+      }
+    };
+    
+    // Check immediately when WASM loads and session is ready
+    if (wasmLoaded && session.sessionStartTime > 0) {
+      checkFirstTimeUser();
+    }
+  }, [wasmLoaded, diagramCount, session.sessionStartTime]);
+
+  // Initialize diagram for returning users (not first-time users)
+  useEffect(() => {
+    const initializeForReturningUser = async () => {
+      try {
+        const hasSeenOnboarding = await AsyncStorage.getItem('gorph_onboarding_completed');
+        
+        console.log('Returning user initialization check:', {
+          initialized: initializedRef.current,
+          diagramCount,
+          sessionStartTime: session.sessionStartTime,
+          hasSeenOnboarding: !!hasSeenOnboarding,
+          wasmLoaded,
+          isFirstTime,
+          showOnboarding
+        });
+        
+        // Only auto-create diagram for returning users
+        if (!initializedRef.current && 
+            diagramCount === 0 && 
+            session.sessionStartTime > 0 && 
+            hasSeenOnboarding && 
+            wasmLoaded && 
+            !isFirstTime && 
+            !showOnboarding) {
+          console.log('Creating welcome diagram for returning user...');
+          initializedRef.current = true;
+          createNewDiagram('Welcome Diagram', '');
+          loadDefaultTemplate();
+        }
+      } catch (error) {
+        console.error('Error checking returning user:', error);
+      }
+    };
+    
+    if (wasmLoaded && session.sessionStartTime > 0) {
+      initializeForReturningUser();
+    }
+    
+    prevDiagramCountRef.current = diagramCount;
+  }, [diagramCount, session.sessionStartTime, createNewDiagram, isFirstTime, showOnboarding, wasmLoaded]);
   
   // Validation states for each pane
   type ValidationStatus = 'valid' | 'invalid' | 'pending' | 'empty';
@@ -50,35 +200,41 @@ export default function App() {
     yaml: ValidationStatus;
     dot: ValidationStatus;
     diagram: ValidationStatus;
+    builder: ValidationStatus;
   }>({
     yaml: 'empty',
     dot: 'empty',
-    diagram: 'empty'
+    diagram: 'empty',
+    builder: 'empty'
   });
   
   const [validationErrors, setValidationErrors] = useState<{
     yaml: string | null;
     dot: string | null;
     diagram: string | null;
+    builder: string | null;
   }>({
     yaml: null,
     dot: null,
-    diagram: null
+    diagram: null,
+    builder: null
   });
   
   // Pane visibility state for desktop layout
   const [visiblePanes, setVisiblePanes] = useState({
     yaml: true,
-    dot: true,
-    diagram: true
+    dot: false,
+    diagram: true,
+    builder: true
   });
 
   // Function to expand a pane (hide others)
-  const expandPane = (paneName: 'yaml' | 'dot' | 'diagram') => {
+  const expandPane = (paneName: 'yaml' | 'dot' | 'diagram' | 'builder') => {
     setVisiblePanes({
       yaml: paneName === 'yaml',
       dot: paneName === 'dot', 
-      diagram: paneName === 'diagram'
+      diagram: paneName === 'diagram',
+      builder: paneName === 'builder'
     });
   };
 
@@ -87,7 +243,8 @@ export default function App() {
     setVisiblePanes({
       yaml: true,
       dot: true,
-      diagram: true
+      diagram: true,
+      builder: true
     });
   };
 
@@ -111,13 +268,30 @@ export default function App() {
   useEffect(() => {
     const updateLayout = () => {
       const { width, height } = Dimensions.get('window');
-      setIsLandscape(width > height && width > 768);
+      const newIsLandscape = width > height && width > 1200;
+      console.log('📋 Layout change detected:', { 
+        width, 
+        height, 
+        newIsLandscape, 
+        currentIsLandscape: isLandscape,
+        templateModalState: templateModalStateRef.current 
+      });
+      
+      // Preserve template modal state across layout changes
+      const wasTemplateModalOpen = templateModalStateRef.current;
+      setIsLandscape(newIsLandscape);
+      
+      // Restore template modal state after layout change
+      if (wasTemplateModalOpen && !showTemplateModal) {
+        console.log('📋 Restoring template modal state after layout change');
+        setShowTemplateModal(true);
+      }
     };
 
     updateLayout();
     const subscription = Dimensions.addEventListener('change', updateLayout);
     return () => subscription?.remove();
-  }, []);
+  }, [isLandscape, showTemplateModal]);
 
   // WASM Loading
   useEffect(() => {
@@ -135,7 +309,7 @@ export default function App() {
     console.log(`${useSimpleBridge ? 'Simple' : 'Runtime WASM'} bridge ready`);
     setWasmError(''); // Clear any error messages
     loadTemplates();
-    loadDefaultTemplate();
+    // Don't load default template - onboarding will handle this
   };
 
   // Handle WebView bridge error
@@ -276,6 +450,98 @@ connections:
     }
   };
 
+  // Handle onboarding completion
+  const handleOnboardingComplete = async (template: any) => {
+    try {
+      // Mark onboarding as completed
+      await AsyncStorage.setItem('gorph_onboarding_completed', 'true');
+      
+      const diagramName = template.name === 'Blank Template' ? 'My Infrastructure' : `${template.name} Diagram`;
+      
+      // Always create a new diagram during onboarding (don't update existing ones)
+      console.log('🆕 Onboarding: Creating new diagram with template:', template.name);
+      console.log('📄 Template YAML length:', template.yaml.length);
+      console.log('📊 Current active diagram before creation:', activeDiagram?.name || 'None');
+      console.log('📊 Current session state before creation:', {
+        activeDiagramId: session.activeDiagramId,
+        diagramCount: Object.keys(session.diagrams).length
+      });
+      
+      const newDiagramId = createNewDiagram(diagramName, template.yaml);
+      console.log('🆕 Onboarding: Created diagram with ID:', newDiagramId);
+      
+      // Set the ref so useEffect can monitor for this diagram
+      onboardingNewDiagramRef.current = newDiagramId;
+      
+      // Use multiple verification steps with different timings
+      const verifyAndSwitch = () => {
+        console.log('🔄 Onboarding: Checking current state after creation:', {
+          sessionActiveDiagramId: session.activeDiagramId,
+          activeDiagramFromHook: activeDiagram?.id,
+          activeDiagramName: activeDiagram?.name,
+          expectedId: newDiagramId,
+          diagramExists: !!session.diagrams[newDiagramId]
+        });
+        
+        // Always force the switch, regardless of what we think the state is
+        console.log('🔄 Onboarding: Force switching to new diagram:', newDiagramId);
+        switchToDiagram(newDiagramId);
+        
+        // Switch to diagram tab
+        setActiveTab('diagram');
+        
+        console.log('✅ Onboarding: Forced switch complete');
+      };
+      
+      // Try immediately
+      setTimeout(verifyAndSwitch, 10);
+      
+      // Try again after a longer delay to be absolutely sure
+      setTimeout(() => {
+        console.log('🔄 Onboarding: Secondary verification after 200ms');
+        if (activeDiagram?.id !== newDiagramId) {
+          console.log('⚠️ Onboarding: Still not switched, forcing again');
+          switchToDiagram(newDiagramId);
+        }
+      }, 200);
+      
+      // Close onboarding with a small delay to ensure all state updates propagate
+      setTimeout(() => {
+        setShowOnboarding(false);
+        setIsFirstTime(false);
+        console.log('✅ Onboarding completed with template:', template.name);
+      }, 100);
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+    }
+  };
+
+  // Handle onboarding skip
+  const handleOnboardingSkip = async () => {
+    try {
+      await AsyncStorage.setItem('gorph_onboarding_completed', 'true');
+      setShowOnboarding(false);
+      setIsFirstTime(false);
+      
+      // Create empty diagram for skipped onboarding
+      createNewDiagram('My Infrastructure', '');
+      
+      console.log('Onboarding skipped');
+    } catch (error) {
+      console.error('Error skipping onboarding:', error);
+    }
+  };
+
+  // Handle template selection from header
+  const handleTemplateSelect = (template: any) => {
+    const previousYaml = yamlInput;
+    setYamlInput(template.yaml, 'template', `Template "${template.name}" applied`);
+    setShowTemplateModal(false);
+    
+    // Switch to diagram tab to show the result
+    setActiveTab('diagram');
+  };
+
   // Helper function to get template display names
   const getTemplateDisplayName = (key: string): string => {
     const names: Record<string, string> = {
@@ -311,12 +577,14 @@ connections:
       setValidationStates({
         yaml: 'empty',
         dot: 'empty',
-        diagram: 'empty'
+        diagram: 'empty',
+        builder: 'empty'
       });
       setValidationErrors({
         yaml: null,
         dot: null,
-        diagram: null
+        diagram: null,
+        builder: null
       });
       setDotOutput('');
       setSvgOutput('');
@@ -342,24 +610,28 @@ connections:
             setValidationStates({
               yaml: 'invalid',
               dot: 'invalid',
-              diagram: 'invalid'
+              diagram: 'invalid',
+              builder: 'invalid'
             });
             setValidationErrors({
               yaml: result.error,
               dot: result.error,
-              diagram: 'Cannot generate diagram due to YAML/DOT errors'
+              diagram: 'Cannot generate diagram due to YAML/DOT errors',
+              builder: result.error
             });
           } else if (result.dot) {
             setDotOutput(result.dot);
             setValidationStates(prev => ({
               yaml: 'valid',
               dot: 'valid',
-              diagram: prev.diagram
+              diagram: prev.diagram,
+              builder: 'valid'
             }));
             setValidationErrors({
               yaml: null,
               dot: null,
-              diagram: null
+              diagram: null,
+              builder: null
             });
             generateSVG(result.dot);
           }
@@ -370,12 +642,15 @@ connections:
           setValidationStates({
             yaml: 'invalid',
             dot: 'invalid',
-            diagram: 'invalid'
+            diagram: 'invalid',
+            builder: 'invalid'
+
           });
           setValidationErrors({
             yaml: String(error),
             dot: String(error),
-            diagram: 'Cannot generate diagram due to YAML/DOT errors'
+            diagram: 'Cannot generate diagram due to YAML/DOT errors',
+            builder: 'Cannot generate diagram due to YAML/DOT errors'
           });
         }
       } else {
@@ -389,24 +664,29 @@ connections:
                 setValidationStates({
                   yaml: 'invalid',
                   dot: 'invalid',
-                  diagram: 'invalid'
+                  diagram: 'invalid',
+                  builder: 'invalid'
                 });
                 setValidationErrors({
                   yaml: result.error,
                   dot: result.error,
-                  diagram: 'Cannot generate diagram due to YAML/DOT errors'
+                  diagram: 'Cannot generate diagram due to YAML/DOT errors',
+                  builder: 'Cannot generate builder due to YAML/DOT errors'
+
                 });
               } else if (result.dot) {
                 setDotOutput(result.dot);
                 setValidationStates(prev => ({
                   yaml: 'valid',
                   dot: 'valid',
-                  diagram: prev.diagram
+                  diagram: prev.diagram,
+                  builder: prev.builder
                 }));
                 setValidationErrors({
                   yaml: null,
                   dot: null,
-                  diagram: null
+                  diagram: null,
+                  builder: null,
                 });
                 generateSVG(result.dot);
               }
@@ -418,12 +698,14 @@ connections:
               setValidationStates({
                 yaml: 'invalid',
                 dot: 'invalid',
-                diagram: 'invalid'
+                diagram: 'invalid',
+                builder: 'invalid'
               });
               setValidationErrors({
                 yaml: String(error),
                 dot: String(error),
-                diagram: 'Cannot generate diagram due to YAML/DOT errors'
+                diagram: 'Cannot generate diagram due to YAML/DOT errors',
+                builder: 'Cannot generate builder due to YAML/DOT errors'
               });
             });
         } else {
@@ -434,12 +716,14 @@ connections:
             setValidationStates(prev => ({
               yaml: 'valid',
               dot: 'valid',
-              diagram: prev.diagram
+              diagram: prev.diagram,
+              builder: prev.builder
             }));
             setValidationErrors({
               yaml: null,
               dot: null,
-              diagram: null
+              diagram: null,
+              builder: null,
             });
             generateSVG(dotCode);
           } catch (error) {
@@ -449,12 +733,14 @@ connections:
             setValidationStates({
               yaml: 'invalid',
               dot: 'invalid',
-              diagram: 'invalid'
+              diagram: 'invalid',
+              builder: 'invalid'
             });
             setValidationErrors({
               yaml: String(error),
               dot: String(error),
-              diagram: 'Cannot generate diagram due to YAML/DOT errors'
+              diagram: 'Cannot generate diagram due to YAML/DOT errors',
+              builder: 'Cannot generate builder due to YAML/DOT errors'
             });
           }
         }
@@ -525,10 +811,10 @@ connections:
         });
         
         if (typeof window.yamlToDot === 'function' && typeof window.validateYaml === 'function' && typeof window.getTemplates === 'function') {
-          console.log('All WASM functions available!');
-          setWasmLoaded(true);
-          loadTemplates();
-          loadDefaultTemplate();
+                  console.log('All WASM functions available!');
+        setWasmLoaded(true);
+        loadTemplates();
+        // Don't load default template - onboarding will handle this
         } else if (attempts < maxAttempts) {
           attempts++;
           setTimeout(checkFunctions, 100);
@@ -557,10 +843,10 @@ connections:
         
         if (templates && typeof templates === 'object' && templates.simple) {
           console.log('Setting simple template');
-          setYamlInput(templates.simple);
+          setYamlInput(templates.simple, 'template', 'Initial template loaded');
         } else {
           console.log('No simple template found, using fallback');
-          setYamlInput(getFallbackTemplate());
+          setYamlInput(getFallbackTemplate(), 'template', 'Fallback template loaded');
         }
       } else if (Platform.OS !== 'web' && wasmBridgeRef.current) {
         // Use WebView bridge for mobile
@@ -570,10 +856,10 @@ connections:
           
           if (templates && typeof templates === 'object' && templates.simple) {
             console.log('Setting template from bridge');
-            setYamlInput(templates.simple);
+            setYamlInput(templates.simple, 'template', 'Template from bridge');
           } else {
             console.log('No simple template from bridge, using fallback');
-            setYamlInput(getFallbackTemplate());
+            setYamlInput(getFallbackTemplate(), 'template', 'Fallback template from bridge');
           }
         } catch (error) {
           console.error('Error getting templates from bridge:', error);
@@ -681,17 +967,8 @@ connections:
   };
 
   const generateSVG = async (dotCode: string) => {
-    if (Platform.OS === 'web') {
-      // Web platforms can use more complex libraries if needed
-      setSvgOutput('');
-      setValidationStates(prev => ({
-        ...prev,
-        diagram: 'valid' // Web doesn't render diagrams but DOT is valid
-      }));
-      return;
-    }
     
-    // Mobile: Use external service to generate SVG from DOT
+    // Use external service to generate SVG from DOT
     try {
       console.log('Generating SVG from DOT code...');
       const response = await fetch('https://quickchart.io/graphviz', {
@@ -750,12 +1027,24 @@ connections:
   // Mobile: Tabbed interface
   if (!isLandscape) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="auto" />
+      <>
+        <View style={styles.container}>
+          <StatusBar style="auto" />
+          <DiagramHeader 
+            onShowHistory={() => setShowHistory(true)} 
+            onTemplatePress={() => {
+              console.log('📋 App.tsx: Mobile DiagramHeader onTemplatePress called - setShowTemplateModal(true)');
+              setShowTemplateModal(true);
+            }}
+          />
         <Header 
           activeTab={activeTab}
           onTabChange={setActiveTab}
           showTabs={true}
+          onTemplatePress={() => {
+            console.log('📋 Header onTemplatePress called in mobile mode');
+            setShowTemplateModal(true);
+          }}
           validationStates={validationStates}
           validationErrors={validationErrors}
         />
@@ -763,10 +1052,10 @@ connections:
         <View style={styles.mobileContent}>
           {activeTab === 'yaml' && (
             <YamlEditor
+              key={`yaml-editor-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
               value={yamlInput}
-              onChange={setYamlInput}
+              onChange={(yaml) => setYamlInput(yaml, 'manual')}
               style={styles.fullPane}
-              onViewDiagram={() => setActiveTab('diagram')}
               templates={templates}
             />
             
@@ -781,9 +1070,23 @@ connections:
           
           {activeTab === 'diagram' && (
             <DiagramViewer
+              key={`diagram-viewer-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
               svg={svgOutput}
               dotContent={dotOutput}
+              yamlContent={yamlInput}
               style={styles.fullPane}
+            />
+          )}
+          
+          {activeTab === 'builder' && (
+            <Builder
+              key={`builder-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
+              yamlContent={yamlInput}
+              onYamlChange={(yaml) => setYamlInput(yaml, 'builder')}
+              svgOutput={svgOutput}
+              dotOutput={dotOutput}
+              templates={templates}
+              onTemplatePress={() => setShowTemplateModal(true)}
             />
           )}
         </View>
@@ -804,25 +1107,66 @@ connections:
             onError={handleBridgeError}
           />
         )}
-      </View>
+        
+        <HistoryViewer
+          visible={showHistory}
+          onClose={() => setShowHistory(false)}
+        />
+        
+        <OnboardingModal
+          visible={showOnboarding}
+          onClose={handleOnboardingSkip}
+          templates={templates}
+          onSelectTemplate={handleOnboardingComplete}
+        />
+
+        
+        <Footer />
+        </View>
+        
+        {/* Render TemplateModal outside container for mobile */}
+        <TemplateModal
+          visible={showTemplateModal}
+          onClose={() => {
+            console.log('📋 App.tsx: TemplateModal onClose called');
+            setShowTemplateModal(false);
+          }}
+          templates={templates}
+          onSelectTemplate={handleTemplateSelect}
+        />
+      </>
     );
   }
 
   // Desktop: 3-pane layout
   return (
-    <View style={styles.container}>
+    <>
+      <View style={styles.container}>
       <StatusBar style="auto" />
+      <DiagramHeader 
+        onShowHistory={() => setShowHistory(true)} 
+        onTemplatePress={() => setShowTemplateModal(true)}
+      />
       <Header 
         activeTab={activeTab}
         onTabChange={setActiveTab}
         showTabs={false}
+        onTemplatePress={() => setShowTemplateModal(true)}
         validationStates={validationStates}
         validationErrors={validationErrors}
       />
       
       {/* Hidden pane restore buttons */}
-      {(!visiblePanes.yaml || !visiblePanes.dot || !visiblePanes.diagram) && (
+      {(!visiblePanes.yaml || !visiblePanes.dot || !visiblePanes.diagram || !visiblePanes.builder) && (
         <View style={styles.restoreBar}>
+          {!visiblePanes.builder && (
+            <TouchableOpacity
+              style={styles.restoreButton}
+              onPress={() => setVisiblePanes(prev => ({ ...prev, builder: true }))}
+            >
+              <Text style={styles.restoreButtonText}>🎛️ Builder</Text>
+            </TouchableOpacity>
+          )}
           {!visiblePanes.yaml && (
             <TouchableOpacity
               style={styles.restoreButton}
@@ -850,42 +1194,79 @@ connections:
         </View>
       )}
       
-      <View style={styles.threePane}>
-        {visiblePanes.yaml && (
+      <View style={styles.fourPane}>
+        {/* Builder - Leftmost pane */}
+        {visiblePanes.builder && (
           <Animated.View style={[
             styles.leftPane, 
             { 
-              flex: visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram ? 1 : 
+              flex: visiblePanes.builder && !visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram ? 1 : 
+                    visiblePanes.builder ? 1 : 0,
+              minHeight: 0
+            }
+          ]}>
+            <Builder
+              key={`builder-desktop-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
+              yamlContent={yamlInput}
+              onYamlChange={(yaml) => setYamlInput(yaml, 'builder')}
+              svgOutput={svgOutput}
+              dotOutput={dotOutput}
+              onTogglePane={() => {
+                if (visiblePanes.builder && !visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram) {
+                  // This pane is already maximized, show all panes
+                  minimizePanes();
+                } else {
+                  // Maximize this pane (hide others)
+                  expandPane('builder');
+                }
+              }}
+              onMinimizePane={() => setVisiblePanes(prev => ({ ...prev, builder: false }))}
+              isExpanded={visiblePanes.builder && !visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram}
+              canExpand={visiblePanes.yaml || visiblePanes.dot || visiblePanes.diagram}
+              templates={templates}
+              onTemplatePress={() => setShowTemplateModal(true)}
+            />
+          </Animated.View>
+        )}
+        
+        {/* YAML Editor - Second pane */}
+        {visiblePanes.yaml && (
+          <Animated.View style={[
+            styles.middlePane, 
+            { 
+              flex: visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram && !visiblePanes.builder ? 1 : 
                     visiblePanes.yaml ? 1 : 0,
               minHeight: 0
             }
           ]}>
             <YamlEditor
+              key={`yaml-editor-desktop-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
               value={yamlInput}
-              onChange={setYamlInput}
+              onChange={(yaml) => setYamlInput(yaml, 'manual')}
               style={{ flex: 1, minHeight: 0 }}
               onTogglePane={() => {
-                if (visiblePanes.yaml && visiblePanes.dot && visiblePanes.diagram) {
-                  // All panes visible, expand this one
-                  expandPane('yaml');
-                } else {
-                  // Some panes hidden, minimize (show all)
+                if (visiblePanes.yaml && !visiblePanes.builder && !visiblePanes.dot && !visiblePanes.diagram) {
+                  // This pane is already maximized, show all panes
                   minimizePanes();
+                } else {
+                  // Maximize this pane (hide others)
+                  expandPane('yaml');
                 }
               }}
-              isExpanded={visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram}
-              canExpand={visiblePanes.dot || visiblePanes.diagram}
-              onViewDiagram={maximizeDiagram}
+              onMinimizePane={() => setVisiblePanes(prev => ({ ...prev, yaml: false }))}
+              isExpanded={visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.diagram && !visiblePanes.builder}
+              canExpand={visiblePanes.dot || visiblePanes.diagram || visiblePanes.builder}
               templates={templates}
             />
           </Animated.View>
         )}
         
+        {/* DOT Output - Third pane */}
         {visiblePanes.dot && (
           <Animated.View style={[
             styles.middlePane, 
             { 
-              flex: visiblePanes.dot && !visiblePanes.yaml && !visiblePanes.diagram ? 1 : 
+              flex: visiblePanes.dot && !visiblePanes.yaml && !visiblePanes.diagram && !visiblePanes.builder ? 1 : 
                     visiblePanes.dot ? 1 : 0,
               minHeight: 0
             }
@@ -894,44 +1275,49 @@ connections:
               value={dotOutput}
               style={{ flex: 1, minHeight: 0 }}
               onTogglePane={() => {
-                if (visiblePanes.yaml && visiblePanes.dot && visiblePanes.diagram) {
-                  // All panes visible, expand this one
-                  expandPane('dot');
-                } else {
-                  // Some panes hidden, minimize (show all)
+                if (visiblePanes.dot && !visiblePanes.yaml && !visiblePanes.builder && !visiblePanes.diagram) {
+                  // This pane is already maximized, show all panes
                   minimizePanes();
+                } else {
+                  // Maximize this pane (hide others)
+                  expandPane('dot');
                 }
               }}
-              isExpanded={visiblePanes.dot && !visiblePanes.yaml && !visiblePanes.diagram}
-              canExpand={visiblePanes.yaml || visiblePanes.diagram}
+              onMinimizePane={() => setVisiblePanes(prev => ({ ...prev, dot: false }))}
+              isExpanded={visiblePanes.dot && !visiblePanes.yaml && !visiblePanes.diagram && !visiblePanes.builder}
+              canExpand={visiblePanes.yaml || visiblePanes.diagram || visiblePanes.builder}
             />
           </Animated.View>
         )}
         
+        {/* Diagram Viewer - Rightmost pane */}
         {visiblePanes.diagram && (
           <Animated.View style={[
             styles.rightPane, 
             { 
-              flex: visiblePanes.diagram && !visiblePanes.yaml && !visiblePanes.dot ? 1 : 
+              flex: visiblePanes.diagram && !visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.builder ? 1 : 
                     visiblePanes.diagram ? 1 : 0,
               minHeight: 0
             }
           ]}>
             <DiagramViewer
+              key={`diagram-viewer-desktop-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
               svg={svgOutput}
               dotContent={dotOutput}
+              yamlContent={yamlInput}
               style={{ flex: 1, minHeight: 0 }}
-              onTogglePane={() => {
-                if (visiblePanes.yaml && visiblePanes.dot && visiblePanes.diagram) {
-                  // All panes visible, expand this one
-                  expandPane('diagram');
+                            onTogglePane={() => {
+                if (visiblePanes.diagram && !visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.builder) {
+                  // This pane is already maximized, show all panes
+                  minimizePanes();
                 } else {
-                  // Some panes hidden, minimize (show all)
-                minimizePanes();
-              }
-            }}
-            isExpanded={visiblePanes.diagram && !visiblePanes.yaml && !visiblePanes.dot}
-            canExpand={visiblePanes.yaml || visiblePanes.dot}
+                  // Maximize this pane (hide others)
+                  expandPane('diagram');
+                }
+              }}
+            onMinimizePane={() => setVisiblePanes(prev => ({ ...prev, diagram: false }))}
+            isExpanded={visiblePanes.diagram && !visiblePanes.yaml && !visiblePanes.dot && !visiblePanes.builder}
+            canExpand={visiblePanes.yaml || visiblePanes.dot || visiblePanes.builder}
             />
           </Animated.View>
         )}
@@ -953,7 +1339,42 @@ connections:
           onError={handleBridgeError}
         />
       )}
-    </View>
+      
+      <HistoryViewer
+        visible={showHistory}
+        onClose={() => setShowHistory(false)}
+      />
+      
+      <OnboardingModal
+        visible={showOnboarding}
+        onClose={handleOnboardingSkip}
+        templates={templates}
+        onSelectTemplate={handleOnboardingComplete}
+      />
+      
+      <Footer />
+      </View>
+      
+      {/* Render TemplateModal outside container for desktop */}
+      <TemplateModal
+        visible={showTemplateModal}
+        onClose={() => {
+          console.log('📋 App.tsx: TemplateModal onClose called');
+          setShowTemplateModal(false);
+        }}
+        templates={templates}
+        onSelectTemplate={handleTemplateSelect}
+      />
+    </>
+  );
+}
+
+// Main App component with provider
+export default function App() {
+  return (
+    <DiagramStateProvider>
+      <AppInner />
+    </DiagramStateProvider>
   );
 }
 
@@ -963,6 +1384,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   threePane: {
+    flex: 1,
+    flexDirection: 'row',
+    minHeight: 0, // Allow flex shrinking
+  },
+  fourPane: {
     flex: 1,
     flexDirection: 'row',
     minHeight: 0, // Allow flex shrinking
@@ -984,6 +1410,11 @@ const styles = StyleSheet.create({
   rightPane: {
     flex: 1,
     backgroundColor: '#ffffff',
+    minHeight: 0, // Allow flex shrinking
+  },
+  builderPane: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
     minHeight: 0, // Allow flex shrinking
   },
   fullPane: {

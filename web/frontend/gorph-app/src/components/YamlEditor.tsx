@@ -1,26 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
-import TemplateModal from './TemplateModal';
+import SuccessTooltip from './SuccessTooltip';
+import { ideTheme } from '../theme/ideTheme';
 
 interface YamlEditorProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (text: string) => void;
   style?: any;
   onTogglePane?: () => void;
+  onMinimizePane?: () => void;
   isExpanded?: boolean;
   canExpand?: boolean;
-  onViewDiagram?: () => void;
   templates?: Record<string, any>;
 }
 
 // Templates will be loaded from the Go WASM backend
 const templates: Record<string, any> = {};
 
-export default function YamlEditor({ value, onChange, style, onTogglePane, isExpanded, canExpand, onViewDiagram, templates }: YamlEditorProps) {
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
+export default function YamlEditor({ value, onChange, style, onTogglePane, onMinimizePane, isExpanded, canExpand, templates }: YamlEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [availableTemplates, setAvailableTemplates] = useState<Record<string, any>>({});
+  const [tooltip, setTooltip] = useState<{visible: boolean; message: string; onUndo?: () => void}>({
+    visible: false,
+    message: '',
+  });
 
   // Update available templates when templates prop changes
   useEffect(() => {
@@ -101,11 +105,7 @@ connections:
     }
   }, [templates]);
 
-  const handleTemplateSelect = (template: any) => {
-    onChange(template.yaml);
-    setSelectedTemplate(template.name);
-    setShowTemplateModal(false);
-  };
+
 
   const getCurrentTemplateName = () => {
     if (!value.trim()) return null;
@@ -129,6 +129,7 @@ connections:
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>📝 YAML Input</Text>
+          <Text style={styles.subtitle}>Master configuration - changes here update everything</Text>
           {currentTemplateName && (
             <View style={styles.templateIndicator}>
               <Text style={styles.templateIndicatorText}>📋 {currentTemplateName}</Text>
@@ -136,14 +137,6 @@ connections:
           )}
         </View>
         <View style={styles.headerControls}>
-          <TouchableOpacity
-            style={styles.templateButton}
-            onPress={() => {
-              setShowTemplateModal(true);
-            }}
-          >
-            <Text style={styles.templateButtonText}>Templates</Text>
-          </TouchableOpacity>
           {Platform.OS === 'web' && (
             <TouchableOpacity
               style={styles.modeButton}
@@ -154,13 +147,21 @@ connections:
               </Text>
             </TouchableOpacity>
           )}
+          {onMinimizePane && (
+            <TouchableOpacity
+              style={styles.minimizeButton}
+              onPress={onMinimizePane}
+            >
+              <Text style={styles.minimizeButtonText}>−</Text>
+            </TouchableOpacity>
+          )}
           {canExpand && onTogglePane && (
             <TouchableOpacity
               style={styles.expandButton}
               onPress={onTogglePane}
             >
               <Text style={styles.expandButtonText}>
-                {isExpanded ? '-' : '+'}
+                {isExpanded ? '⤓' : '⤢'}
               </Text>
             </TouchableOpacity>
           )}
@@ -199,28 +200,17 @@ connections:
             placeholder="Enter your YAML infrastructure definition here..."
             placeholderTextColor="#9ca3af"
             textAlignVertical="top"
-            contentInsetAdjustmentBehavior="automatic"
             autoFocus={isEditing}
           />
         )}
       </View>
       
-      {onViewDiagram && (
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.viewDiagramButton}
-            onPress={onViewDiagram}
-          >
-            <Text style={styles.viewDiagramButtonText}>📊 View Visual Diagram</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <TemplateModal
-        visible={showTemplateModal}
-        onClose={() => setShowTemplateModal(false)}
-        onSelectTemplate={handleTemplateSelect}
-        templates={availableTemplates}
+      {/* Success Tooltip */}
+      <SuccessTooltip
+        visible={tooltip.visible}
+        message={tooltip.message}
+        onUndo={tooltip.onUndo}
+        onClose={() => setTooltip({ visible: false, message: '' })}
       />
     </KeyboardAvoidingView>
   );
@@ -236,17 +226,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: ideTheme.spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: ideTheme.colors.light.border,
   },
   titleContainer: {
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: ideTheme.typography.ui.fontSize + 1,
     fontWeight: '600',
-    color: '#1f2937',
+    color: ideTheme.colors.light.text,
+    fontFamily: ideTheme.fonts.system,
+    letterSpacing: ideTheme.typography.ui.letterSpacing,
+  },
+  subtitle: {
+    fontSize: ideTheme.typography.small.fontSize,
+    color: '#6b7280',
+    marginTop: ideTheme.spacing.xs,
+    fontFamily: ideTheme.fonts.system,
+    letterSpacing: ideTheme.typography.small.letterSpacing,
   },
   templateIndicator: {
     marginTop: 4,
@@ -261,41 +260,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  templateButton: {
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  templateButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
+
   modeButton: {
     backgroundColor: '#f3f4f6',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    marginLeft: 8,
+    paddingVertical: ideTheme.spacing.xs,
+    paddingHorizontal: ideTheme.spacing.sm,
+    borderRadius: ideTheme.borderRadius.sm,
+    marginLeft: ideTheme.spacing.sm,
   },
   modeButtonText: {
     color: '#374151',
-    fontSize: 12,
+    fontSize: ideTheme.typography.small.fontSize,
     fontWeight: '500',
+    fontFamily: ideTheme.fonts.system,
+    letterSpacing: ideTheme.typography.small.letterSpacing,
   },
-  expandButton: {
-    backgroundColor: '#10b981',
+  minimizeButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
     width: 32,
     height: 32,
-    borderRadius: 6,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 8,
+  },
+  minimizeButtonText: {
+    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  expandButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   expandButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '600',
   },
   editorContainer: {
     flex: 1,
@@ -304,12 +314,14 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    padding: 16,
-    fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    color: '#1f2937',
+    padding: ideTheme.spacing.lg,
+    fontSize: ideTheme.typography.code.fontSize,
+    fontFamily: Platform.OS === 'web' ? ideTheme.fonts.code : (Platform.OS === 'ios' ? 'Menlo' : 'monospace'),
+    color: ideTheme.colors.light.text,
     textAlignVertical: 'top',
-    backgroundColor: '#ffffff',
+    backgroundColor: ideTheme.colors.light.background,
+    lineHeight: ideTheme.typography.code.lineHeight,
+    letterSpacing: ideTheme.typography.code.letterSpacing,
     minHeight: 200, // Minimum height for usability
     // Remove maxHeight constraint to allow full expansion
   },
@@ -321,22 +333,5 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     minHeight: 200,
-  },
-  buttonContainer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  viewDiagramButton: {
-    backgroundColor: '#3b82f6',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  viewDiagramButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 }); 

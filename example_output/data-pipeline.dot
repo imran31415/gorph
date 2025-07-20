@@ -1,16 +1,6 @@
 digraph Infrastructure {
   rankdir=LR;
   node [shape=plaintext, fontname=Helvetica];
-  subgraph cluster_FRONTEND {
-    label="Frontend";
-    Dashboard [tooltip="Dashboard: Grafana analytics dashboard\nStatus: healthy\nOwner: analytics\nEnvironment: production" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>Dashboard</B></TD></TR>
-        <TR><TD>Grafana analytics dashbo...</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-  }
   subgraph cluster_INTEGRATION {
     label="Integration";
     DataSource [tooltip="DataSource: External data APIs\nStatus: healthy\nOwner: data-team\nEnvironment: production\nTags: [external]" label=<
@@ -89,6 +79,16 @@ digraph Infrastructure {
       <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
         <TR><TD><B>Scheduler</B></TD></TR>
         <TR><TD>Airflow job orchestrator</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_FRONTEND {
+    label="Frontend";
+    Dashboard [tooltip="Dashboard: Grafana analytics dashboard\nStatus: healthy\nOwner: analytics\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Dashboard</B></TD></TR>
+        <TR><TD>Grafana analytics dashbo...</TD></TR>
         <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
       </TABLE>
     >];

@@ -1,26 +1,38 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ValidationIcon from './ValidationIcon';
+import { ideTheme } from '../theme/ideTheme';
 
 type ValidationStatus = 'valid' | 'invalid' | 'pending' | 'empty';
 
 interface HeaderProps {
-  activeTab: 'yaml' | 'dot' | 'diagram';
-  onTabChange: (tab: 'yaml' | 'dot' | 'diagram') => void;
+  activeTab: 'yaml' | 'dot' | 'diagram' | 'builder';
+  onTabChange: (tab: 'yaml' | 'dot' | 'diagram' | 'builder') => void;
   showTabs: boolean;
+  onTemplatePress?: () => void;
   validationStates?: {
     yaml: ValidationStatus;
     dot: ValidationStatus;
     diagram: ValidationStatus;
+    builder: ValidationStatus;
   };
   validationErrors?: {
     yaml: string | null;
     dot: string | null;
     diagram: string | null;
+    builder: string | null;
   };
 }
 
-export default function Header({ activeTab, onTabChange, showTabs, validationStates, validationErrors }: HeaderProps) {
+export default function Header({ 
+  activeTab, 
+  onTabChange, 
+  showTabs, 
+  onTemplatePress,
+  validationStates, 
+  validationErrors 
+}: HeaderProps) {
   const handleSourceCodePress = () => {
     Linking.openURL('https://github.com/imran31415/gorph');
   };
@@ -31,22 +43,12 @@ export default function Header({ activeTab, onTabChange, showTabs, validationSta
 
   return (
     <View style={styles.container}>
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>Gorph</Text>
-        <Text style={styles.subtitle}>Infrastructure Visualizer</Text>
-        <TouchableOpacity style={styles.githubLink} onPress={handleSourceCodePress}>
-          <Text style={styles.githubText}>
-            <Text style={styles.githubLinkText}>Source Code</Text> by{' '}
-            <Text style={styles.authorLinkText} onPress={handleAuthorPress}>Imran</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
-      
       {showTabs && (
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'yaml' && styles.activeTab]}
             onPress={() => onTabChange('yaml')}
+            activeOpacity={0.7}
           >
             <View style={styles.tabContent}>
               <Text style={[styles.tabText, activeTab === 'yaml' && styles.activeTabText]}>
@@ -65,6 +67,7 @@ export default function Header({ activeTab, onTabChange, showTabs, validationSta
           <TouchableOpacity
             style={[styles.tab, activeTab === 'dot' && styles.activeTab]}
             onPress={() => onTabChange('dot')}
+            activeOpacity={0.7}
           >
             <View style={styles.tabContent}>
               <Text style={[styles.tabText, activeTab === 'dot' && styles.activeTabText]}>
@@ -83,6 +86,7 @@ export default function Header({ activeTab, onTabChange, showTabs, validationSta
           <TouchableOpacity
             style={[styles.tab, activeTab === 'diagram' && styles.activeTab]}
             onPress={() => onTabChange('diagram')}
+            activeOpacity={0.7}
           >
             <View style={styles.tabContent}>
               <Text style={[styles.tabText, activeTab === 'diagram' && styles.activeTabText]}>
@@ -97,6 +101,25 @@ export default function Header({ activeTab, onTabChange, showTabs, validationSta
               )}
             </View>
           </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'builder' && styles.activeTab]}
+            onPress={() => onTabChange('builder')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.tabContent}>
+              <Text style={[styles.tabText, activeTab === 'builder' && styles.activeTabText]}>
+                BUILDER
+              </Text>
+              {validationStates && (
+                <ValidationIcon
+                  status={validationStates.builder}
+                  errorMessage={validationErrors?.builder}
+                  size={14}
+                />
+              )}
+            </View>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -105,66 +128,64 @@ export default function Header({ activeTab, onTabChange, showTabs, validationSta
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#2563eb',
-    paddingTop: 44, // Status bar padding
-    paddingBottom: 8,
+    backgroundColor: '#f8fafc',
+    paddingVertical: 12,
     paddingHorizontal: 16,
-  },
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: '#bfdbfe',
-    marginTop: 2,
-  },
-  githubLink: {
-    marginTop: 4,
-  },
-  githubText: {
-    fontSize: 10,
-    color: '#bfdbfe',
-  },
-  githubLinkText: {
-    textDecorationLine: 'underline',
-  },
-  authorLinkText: {
-    textDecorationLine: 'underline',
-    fontWeight: '500',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
   },
   tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   tab: {
     flex: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     marginHorizontal: 2,
-    borderRadius: 4,
+    borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   tabContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   activeTab: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#2563eb',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   tabText: {
-    color: '#bfdbfe',
-    fontSize: 12,
-    fontWeight: '500',
+    color: '#64748b',
+    fontSize: ideTheme.typography.small.fontSize + 1,
+    fontWeight: '600',
+    fontFamily: ideTheme.fonts.system,
+    letterSpacing: 0.5,
   },
   activeTabText: {
     color: '#ffffff',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    fontFamily: ideTheme.fonts.system,
+    letterSpacing: 0.5,
   },
 }); 

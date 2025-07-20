@@ -1,43 +1,57 @@
-entities:
-  - id: Client
-    category: USER_FACING
-    description: "Web browser client"
-    status: healthy
-    owner: frontend
-    environment: production
+# Simple Web Application Example
+# This template shows a basic web application with client, server, and database
+# Use this as a starting point for simple architectures
 
+entities:
+  # User-facing component - represents the end user's browser
+  - id: Client
+    category: USER_FACING  # Direct user interaction point
+    description: "Web browser client"
+    status: healthy        # healthy, degraded, down, or unknown
+    owner: frontend        # Team responsible for this component
+    environment: production # production, staging, or development
+
+  # Frontend server - serves the web application
   - id: WebServer
-    category: FRONTEND
+    category: FRONTEND     # Client-side or web-serving component
     description: "Simple web server"
     status: healthy
     owner: ops
     environment: production
-    attributes:
-      language: Go
+    attributes:            # Optional: additional metadata
+      language: Go         # Technology stack information
 
+  # Data storage component
   - id: Database
-    category: DATABASE
+    category: DATABASE     # Data storage systems
     description: "SQLite database"
-    status: degraded
+    status: degraded       # Shows reduced functionality
     owner: ops
     environment: production
     attributes:
-      engine: SQLite
+      engine: SQLite       # Database technology
 
+  # Background service component
   - id: BackupService
-    category: BACKEND
+    category: BACKEND      # Server-side processing
     description: "Backup scheduler"
-    status: down
+    status: down           # Not operational
     owner: ops
     environment: production
 
+# Define relationships between components
 connections:
+  # User makes HTTP requests to the web server
   - from: Client
     to: WebServer
-    type: HTTP_Request
+    type: HTTP_Request     # Standard web requests
+
+  # Web server connects to database for data
   - from: WebServer
     to: Database
-    type: DB_Connection
+    type: DB_Connection    # Database connections
+
+  # Backup service accesses database for backups
   - from: BackupService
     to: Database
-    type: DB_Connection 
+    type: DB_Connection    # Database connections 

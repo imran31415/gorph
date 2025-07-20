@@ -1,16 +1,6 @@
 digraph Infrastructure {
   rankdir=LR;
   node [shape=plaintext, fontname=Helvetica];
-  subgraph cluster_ENVIRONMENT {
-    label="Environment";
-    ProductionCluster [tooltip="ProductionCluster: Live system\nStatus: healthy\nOwner: sre" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>ProductionCluster</B></TD></TR>
-        <TR><TD>Live system</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-  }
   subgraph cluster_SCM {
     label="Source Control";
     GitHub [tooltip="GitHub: Source code repo\nStatus: healthy\nOwner: dev" label=<
@@ -57,6 +47,16 @@ digraph Infrastructure {
       <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
         <TR><TD><B>ArgoCD</B></TD></TR>
         <TR><TD>GitOps deployer</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_ENVIRONMENT {
+    label="Environment";
+    ProductionCluster [tooltip="ProductionCluster: Live system\nStatus: healthy\nOwner: sre" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>ProductionCluster</B></TD></TR>
+        <TR><TD>Live system</TD></TR>
         <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
       </TABLE>
     >];

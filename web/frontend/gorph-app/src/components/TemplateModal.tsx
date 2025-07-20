@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 
 interface Template {
   name: string;
@@ -14,191 +14,168 @@ interface TemplateModalProps {
   templates: Record<string, Template>;
 }
 
-export default function TemplateModal({ visible, onClose, onSelectTemplate, templates }: TemplateModalProps) {
+export default function TemplateModal({ 
+  visible, 
+  onClose, 
+  onSelectTemplate, 
+  templates 
+}: TemplateModalProps) {
+  console.log('🚨 TemplateModal: COMPONENT CALLED - visible:', visible, 'Platform:', Platform.OS, 'templates count:', Object.keys(templates).length);
+  
+  if (!visible) {
+    console.log('📋 TemplateModal: Not visible, returning null');
+    return null;
+  }
+
+  console.log('🚨 TemplateModal: RENDERING OVERLAY!!! 🚨');
+
+  const templateKeys = Object.keys(templates);
+  console.log('📋 TemplateModal: Available templates:', templateKeys);
+
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>📋 Select Template</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView 
-            style={styles.templateList} 
-            showsVerticalScrollIndicator={true}
-            contentContainerStyle={styles.templateListContent}
-          >
-            {Object.entries(templates).length === 0 ? (
-              <View style={styles.noTemplates}>
-                <Text style={styles.noTemplatesText}>No templates available</Text>
-              </View>
-            ) : (
-              Object.entries(templates).map(([key, template]) => (
-              <TouchableOpacity
-                key={key}
-                style={styles.templateCard}
-                onPress={() => onSelectTemplate(template)}
-              >
-                <View style={styles.templateHeader}>
-                  <Text style={styles.templateName}>{template.name}</Text>
-                  <View style={styles.templateBadge}>
-                    <Text style={styles.templateBadgeText}>Template</Text>
-                  </View>
-                </View>
-                {template.description && (
-                  <Text style={styles.templateDescription}>{template.description}</Text>
-                )}
-                <View style={styles.templatePreview}>
-                  <Text style={styles.previewText} numberOfLines={3}>
-                    {template.yaml.split('\n').slice(0, 6).join('\n')}...
-                  </Text>
-                </View>
-                              </TouchableOpacity>
-              ))
-            )}
-          </ScrollView>
-          
-          <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={styles.overlay}>
+      {/* Background overlay that closes modal when pressed */}
+      <TouchableOpacity 
+        style={styles.backgroundOverlay} 
+        onPress={onClose}
+        activeOpacity={1}
+      />
+      
+      {/* Modal content */}
+      <View style={styles.modalContainer}>
+        {/* Header */}
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Choose Template</Text>
+          <Text style={styles.modalSubtitle}>
+            Select a template to get started quickly
+          </Text>
         </View>
+        
+        {/* Templates */}
+        <ScrollView style={styles.templatesContainer} showsVerticalScrollIndicator={false}>
+          {templateKeys.length === 0 ? (
+            <View style={styles.noTemplates}>
+              <Text style={styles.noTemplatesText}>No templates available</Text>
+            </View>
+          ) : (
+            templateKeys.map((key) => {
+              const template = templates[key];
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={styles.templateCard}
+                  onPress={() => {
+                    console.log('📋 TemplateModal: Template selected:', key);
+                    onSelectTemplate(template);
+                    onClose();
+                  }}
+                >
+                  <View style={styles.templateHeader}>
+                    <Text style={styles.templateIcon}>
+                      {key === 'simple' ? '🏗️' :
+                       key === 'webapp' ? '🌐' :
+                       key === 'microservices' ? '🔄' :
+                       key === 'data-pipeline' ? '📊' :
+                       key === 'deploy' ? '🚀' :
+                       '⚙️'}
+                    </Text>
+                    <View style={styles.templateInfo}>
+                      <Text style={styles.templateName}>{template.name}</Text>
+                      <Text style={styles.templateDescription}>
+                        {template.description || 'Infrastructure template'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.templateAction}>Use Template →</Text>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </ScrollView>
+        
+        {/* Footer */}
+        <View style={styles.modalFooter}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={onClose}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Close Button */}
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={onClose}
+        >
+          <Text style={styles.closeButtonText}>×</Text>
+        </TouchableOpacity>
       </View>
-    </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    ...Platform.OS === 'web' ? {
+      position: 'fixed' as any,
+    } : {
+      position: 'absolute',
+    },
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 10,
+  },
+  backgroundOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContainer: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 600,
-    maxHeight: '80%',
+    borderRadius: 16,
+    width: '95%',
+    minWidth: 280,
+    maxWidth: 500,
+    maxHeight: '90%',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 12,
+    zIndex: 10000,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
+    padding: 24,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: '#f1f5f9',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#1f2937',
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    fontSize: 16,
-    color: '#6b7280',
-    fontWeight: '500',
-  },
-  templateList: {
-    flex: 1,
-    padding: 20,
-  },
-  templateListContent: {
-    paddingBottom: 20, // Add some padding at the bottom for the footer
-  },
-  templateCard: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  templateHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 8,
+    textAlign: 'center',
   },
-  templateName: {
+  modalSubtitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-    flex: 1,
-  },
-  templateBadge: {
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  templateBadgeText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  templateDescription: {
-    fontSize: 14,
     color: '#6b7280',
-    marginBottom: 12,
-    lineHeight: 20,
+    textAlign: 'center',
+    lineHeight: 24,
   },
-  templatePreview: {
-    backgroundColor: '#ffffff',
-    borderRadius: 6,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  previewText: {
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    color: '#374151',
-    lineHeight: 16,
-  },
-  modalFooter: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  cancelButton: {
-    backgroundColor: '#f3f4f6',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#374151',
-    fontSize: 16,
-    fontWeight: '500',
+  templatesContainer: {
+    flex: 1,
+    padding: 24,
+    paddingTop: 16,
   },
   noTemplates: {
     padding: 20,
@@ -208,5 +185,77 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     fontStyle: 'italic',
+  },
+  templateCard: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  templateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  templateIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  templateInfo: {
+    flex: 1,
+  },
+  templateName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 2,
+  },
+  templateDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+  },
+  templateAction: {
+    fontSize: 14,
+    color: '#3b82f6',
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+  modalFooter: {
+    padding: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  cancelButton: {
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: '#6b7280',
+    fontWeight: 'bold',
+    lineHeight: 20,
   },
 }); 

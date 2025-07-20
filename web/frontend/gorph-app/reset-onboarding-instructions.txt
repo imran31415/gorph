@@ -1,0 +1,3 @@
+// To reset onboarding for testing, clear AsyncStorage in browser DevTools:
+// Application -> Storage -> Local Storage -> Clear All
+// OR add ?reset=true to URL and implement reset logic

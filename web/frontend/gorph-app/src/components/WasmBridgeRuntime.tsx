@@ -52,7 +52,7 @@ const WasmBridgeRuntime = forwardRef<WasmBridgeRef, WasmBridgeProps>((props, ref
               console.log(`Runtime Bridge: Failed to fetch from ${url}: ${response.status}`);
             }
           } catch (urlError) {
-            console.log(`Runtime Bridge: Error fetching from ${url}:`, urlError.message);
+            console.log(`Runtime Bridge: Error fetching from ${url}:`, urlError instanceof Error ? urlError.message : String(urlError));
             continue;
           }
         }

@@ -1,26 +1,6 @@
 digraph Infrastructure {
   rankdir=LR;
   node [shape=plaintext, fontname=Helvetica];
-  subgraph cluster_DATABASE {
-    label="Database";
-    Database [tooltip="Database: SQLite database\nStatus: degraded\nOwner: ops\nEnvironment: production" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>Database</B></TD></TR>
-        <TR><TD>SQLite database</TD></TR>
-        <TR><TD BGCOLOR="yellow" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-  }
-  subgraph cluster_BACKEND {
-    label="Backend";
-    BackupService [tooltip="BackupService: Backup scheduler\nStatus: down\nOwner: ops\nEnvironment: production" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>BackupService</B></TD></TR>
-        <TR><TD>Backup scheduler</TD></TR>
-        <TR><TD BGCOLOR="red" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-  }
   subgraph cluster_USER_FACING {
     label="User Facing";
     Client [tooltip="Client: Web browser client\nStatus: healthy\nOwner: frontend\nEnvironment: production" label=<
@@ -38,6 +18,26 @@ digraph Infrastructure {
         <TR><TD><B>WebServer</B></TD></TR>
         <TR><TD>Simple web server</TD></TR>
         <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_DATABASE {
+    label="Database";
+    Database [tooltip="Database: SQLite database\nStatus: degraded\nOwner: ops\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Database</B></TD></TR>
+        <TR><TD>SQLite database</TD></TR>
+        <TR><TD BGCOLOR="yellow" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_BACKEND {
+    label="Backend";
+    BackupService [tooltip="BackupService: Backup scheduler\nStatus: down\nOwner: ops\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>BackupService</B></TD></TR>
+        <TR><TD>Backup scheduler</TD></TR>
+        <TR><TD BGCOLOR="red" HEIGHT="8"></TD></TR>
       </TABLE>
     >];
   }

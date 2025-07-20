@@ -26,12 +26,13 @@ go build -o gorph main.go
 
 ### Web Application
 ```bash
-# Start the cross-platform web app
-cd web/frontend/gorph-app
-npm install
-npm run dev
+# Install dependencies
+make setup
 
-# Open http://localhost:19006
+# Start the cross-platform web app
+make web-frontend
+
+# Open http://localhost:8081
 ```
 
 ## 📱 Applications
@@ -160,6 +161,56 @@ The Go WASM module provides these functions:
 │                         │
 └─────────────────────────┘
 ```
+
+## 🎛️ Visual Builder
+
+Gorph now includes a **visual Builder** that makes it easy to create infrastructure diagrams without knowing the YAML syntax:
+
+### Builder Features:
+- **Visual Entity Creation**: Add infrastructure components using forms and dropdowns
+- **Smart Connection Builder**: Create relationships between entities with validation
+- **Real-time YAML Generation**: Changes in the Builder automatically update the YAML
+- **Template Library**: Start with predefined templates for common patterns
+- **Live Validation**: Get immediate feedback on errors and suggestions
+
+### How to Use:
+1. Click the **"BUILDER"** tab in the interface
+2. Use the **"Entities"** section to add infrastructure components
+3. Use the **"Connections"** section to define relationships
+4. Watch the YAML update in real-time
+5. Switch to **"DIAGRAM"** to see your visualization
+
+### Available Categories:
+- **USER_FACING**: Web browsers, mobile apps, APIs
+- **FRONTEND**: React apps, static sites, web servers
+- **BACKEND**: APIs, microservices, server applications
+- **DATABASE**: PostgreSQL, Redis, MongoDB, etc.
+- **NETWORK**: Load balancers, CDNs, API gateways
+- **INFRASTRUCTURE**: Kubernetes, Docker, cloud services
+- **CI/CD**: Jenkins, GitHub Actions, deployment tools
+- And many more...
+
+### Builder Interface
+```
+┌─────────────────────────────────────┐
+│ 🎛️ Builder Mode                    │
+├─────────────────────────────────────┤
+│ ➕ Add Entity                       │
+│ 🔗 Add Connection                   │
+│ 📋 Templates                        │
+│ ⚙️  Settings                        │
+└─────────────────────────────────────┘
+```
+
+## 📚 YAML Schema Documentation
+
+For advanced users or custom configurations, see the complete [YAML Schema Documentation](YAML_SCHEMA.md) which includes:
+
+- **Complete field reference** with examples
+- **Available categories and connection types**
+- **Best practices** for complex diagrams
+- **Validation rules** and troubleshooting
+- **Advanced features** like custom attributes and tags
 
 ## 📸 Screenshots
 

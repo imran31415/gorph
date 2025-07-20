@@ -1,6 +1,33 @@
 digraph Infrastructure {
   rankdir=LR;
   node [shape=plaintext, fontname=Helvetica];
+  subgraph cluster_DATABASE {
+    label="Database";
+    UserDB [tooltip="UserDB: User data PostgreSQL\nStatus: healthy\nOwner: user-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>UserDB</B></TD></TR>
+        <TR><TD>User data PostgreSQL</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    OrderDB [tooltip="OrderDB: Order data MongoDB\nStatus: healthy\nOwner: order-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>OrderDB</B></TD></TR>
+        <TR><TD>Order data MongoDB</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INFRASTRUCTURE {
+    label="Infrastructure";
+    MessageQueue [tooltip="MessageQueue: RabbitMQ message broker\nStatus: healthy\nOwner: platform-team\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MessageQueue</B></TD></TR>
+        <TR><TD>RabbitMQ message broker</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
   subgraph cluster_INTEGRATION {
     label="Integration";
     PaymentGateway [tooltip="PaymentGateway: External payment processor\nStatus: healthy\nOwner: integrations\nEnvironment: production\nTags: [external]" label=<
@@ -65,33 +92,6 @@ digraph Infrastructure {
       <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
         <TR><TD><B>NotificationService</B></TD></TR>
         <TR><TD>Email and push notificat...</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-  }
-  subgraph cluster_DATABASE {
-    label="Database";
-    UserDB [tooltip="UserDB: User data PostgreSQL\nStatus: healthy\nOwner: user-team\nEnvironment: production" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>UserDB</B></TD></TR>
-        <TR><TD>User data PostgreSQL</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-    OrderDB [tooltip="OrderDB: Order data MongoDB\nStatus: healthy\nOwner: order-team\nEnvironment: production" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>OrderDB</B></TD></TR>
-        <TR><TD>Order data MongoDB</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-  }
-  subgraph cluster_INFRASTRUCTURE {
-    label="Infrastructure";
-    MessageQueue [tooltip="MessageQueue: RabbitMQ message broker\nStatus: healthy\nOwner: platform-team\nEnvironment: production" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>MessageQueue</B></TD></TR>
-        <TR><TD>RabbitMQ message broker</TD></TR>
         <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
       </TABLE>
     >];

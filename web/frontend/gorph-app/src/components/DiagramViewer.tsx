@@ -1,14 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, Modal } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { ideTheme } from '../theme/ideTheme';
 
 interface DiagramViewerProps {
-  svg: string;
-  dotContent?: string;
+  svg: string | null;
+  dotContent: string;
+  yamlContent?: string;
   style?: any;
   onTogglePane?: () => void;
+  onMinimizePane?: () => void;
   isExpanded?: boolean;
   canExpand?: boolean;
+  diagramHeight?: number;
+  onHeightChange?: (height: number) => void;
 }
 
 interface SvgRendererProps {
@@ -95,11 +100,13 @@ function MobileSvgRenderer({ svgContent }: { svgContent: string }) {
   );
 }
 
-export default function DiagramViewer({ svg, dotContent, style, onTogglePane, isExpanded, canExpand }: DiagramViewerProps) {
+export default function DiagramViewer({ svg, dotContent, yamlContent, style, onTogglePane, onMinimizePane, isExpanded, canExpand, diagramHeight = 390, onHeightChange }: DiagramViewerProps) {
   const [zoom, setZoom] = useState(1);
   const [renderedSvg, setRenderedSvg] = useState<string>('');
   const [renderError, setRenderError] = useState<string>('');
   const [isRendering, setIsRendering] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const handleZoomIn = () => {
     setZoom(prev => Math.min(prev + 0.2, 3));
@@ -180,6 +187,80 @@ export default function DiagramViewer({ svg, dotContent, style, onTogglePane, is
     }
   };
 
+  const exportAsImage = async () => {
+    try {
+      if (Platform.OS === 'web' && renderedSvg) {
+        // Create a temporary link to download the SVG
+        const svgBlob = new Blob([renderedSvg], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(svgBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'infrastructure-diagram.svg';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        Alert.alert('Success', 'Diagram exported as SVG file');
+      } else {
+        Alert.alert('Export Not Available', 'Image export is only available on web platform with rendered diagrams');
+      }
+    } catch (error) {
+      Alert.alert('Export Error', 'Failed to export diagram image');
+    }
+  };
+
+  const exportAsYaml = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        // Get YAML content from props
+        const yaml = getYamlContent();
+        if (yaml) {
+          const yamlBlob = new Blob([yaml], { type: 'text/yaml' });
+          const url = URL.createObjectURL(yamlBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'infrastructure.yaml';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          Alert.alert('Success', 'YAML configuration exported');
+        } else {
+          Alert.alert('Export Error', 'No YAML content available to export');
+        }
+      } else {
+        Alert.alert('Export Not Available', 'File export is only available on web platform');
+      }
+    } catch (error) {
+      Alert.alert('Export Error', 'Failed to export YAML file');
+    }
+  };
+
+  const exportAsDot = async () => {
+    try {
+      if (Platform.OS === 'web' && dotContent) {
+        const dotBlob = new Blob([dotContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(dotBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'infrastructure.dot';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        Alert.alert('Success', 'DOT notation exported');
+      } else {
+        Alert.alert('Export Error', 'No DOT content available to export');
+      }
+    } catch (error) {
+      Alert.alert('Export Error', 'Failed to export DOT file');
+    }
+  };
+
+  const getYamlContent = () => {
+    return yamlContent;
+  };
+
   // Show loading state while rendering
   if (isRendering) {
     return (
@@ -187,20 +268,33 @@ export default function DiagramViewer({ svg, dotContent, style, onTogglePane, is
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>📊 Diagram</Text>
+            <Text style={styles.subtitle}>Visual output - automatically generated from YAML</Text>
           </View>
           <View style={styles.headerControls}>
-            <Text style={styles.statusText}>Rendering...</Text>
+            {onMinimizePane && (
+              <TouchableOpacity
+                style={styles.minimizeButton}
+                onPress={onMinimizePane}
+              >
+                <Text style={styles.minimizeButtonText}>−</Text>
+              </TouchableOpacity>
+            )}
             {canExpand && onTogglePane && (
               <TouchableOpacity
                 style={styles.expandButton}
                 onPress={onTogglePane}
               >
                 <Text style={styles.expandButtonText}>
-                  {isExpanded ? '-' : '+'}
+                  {isExpanded ? '⤓' : '⤢'}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
+        </View>
+        
+        {/* Controls Row for loading state */}
+        <View style={styles.controlsRow}>
+          <Text style={styles.statusText}>Rendering...</Text>
         </View>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Generating diagram...</Text>
@@ -219,31 +313,96 @@ export default function DiagramViewer({ svg, dotContent, style, onTogglePane, is
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>📊 Diagram</Text>
+            <Text style={styles.subtitle}>Visual output - automatically generated from YAML</Text>
           </View>
           <View style={styles.headerControls}>
-            <View style={styles.controls}>
-              <TouchableOpacity style={styles.controlButton} onPress={handleZoomOut}>
-                <Text style={styles.controlButtonText}>-</Text>
+            {onMinimizePane && (
+              <TouchableOpacity
+                style={styles.minimizeButton}
+                onPress={onMinimizePane}
+              >
+                <Text style={styles.minimizeButtonText}>−</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.zoomButton} onPress={handleZoomReset}>
-                <Text style={styles.zoomButtonText}>{Math.round(zoom * 100)}%</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn}>
-                <Text style={styles.controlButtonText}>+</Text>
-              </TouchableOpacity>
-            </View>
+            )}
             {canExpand && onTogglePane && (
               <TouchableOpacity
                 style={styles.expandButton}
                 onPress={onTogglePane}
               >
                 <Text style={styles.expandButtonText}>
-                  {isExpanded ? '⤡' : '⤢'}
+                  {isExpanded ? '⤓' : '⤢'}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
+        
+        {/* Controls Row */}
+        <View style={styles.controlsRow}>
+          <View style={styles.controls}>
+            <TouchableOpacity style={styles.controlButton} onPress={handleZoomOut}>
+              <Text style={styles.controlButtonText}>-</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.zoomButton} onPress={handleZoomReset}>
+              <Text style={styles.zoomButtonText}>{Math.round(zoom * 100)}%</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn}>
+              <Text style={styles.controlButtonText}>+</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Height Controls */}
+          {onHeightChange && (
+            <View style={styles.heightControls}>
+              <TouchableOpacity
+                style={styles.heightButton}
+                onPress={() => {
+                  const newHeight = Math.max(200, diagramHeight - 50);
+                  onHeightChange(newHeight);
+                }}
+              >
+                <Text style={styles.heightButtonText}>−</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.heightPreset}
+                onLongPress={() => {
+                  // Show preset options on long press
+                  Alert.alert(
+                    'Diagram Height Presets',
+                    'Choose a preset height:',
+                    [
+                      { text: 'Small (250px)', onPress: () => onHeightChange(250) },
+                      { text: 'Medium (350px)', onPress: () => onHeightChange(350) },
+                      { text: 'Large (500px)', onPress: () => onHeightChange(500) },
+                      { text: 'Cancel', style: 'cancel' }
+                    ]
+                  );
+                }}
+                onPress={() => onHeightChange(300)} // Reset to default
+              >
+                <Text style={styles.heightLabel}>{diagramHeight}px</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.heightButton}
+                onPress={() => {
+                  const newHeight = Math.min(800, diagramHeight + 50);
+                  onHeightChange(newHeight);
+                }}
+              >
+                <Text style={styles.heightButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          {/* Export Button */}
+          <TouchableOpacity
+            style={styles.exportButton}
+            onPress={() => setShowExportModal(true)}
+          >
+            <Text style={styles.exportButtonText}>📤 Export</Text>
+          </TouchableOpacity>
+        </View>
+        
         <ScrollView style={styles.scrollView} maximumZoomScale={3} minimumZoomScale={0.2}>
           <SvgRenderer svgContent={renderedSvg} zoom={zoom} />
         </ScrollView>
@@ -257,19 +416,38 @@ export default function DiagramViewer({ svg, dotContent, style, onTogglePane, is
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>📊 Diagram</Text>
+            <Text style={styles.subtitle}>Visual output - automatically generated from YAML</Text>
           </View>
           <View style={styles.headerControls}>
+            {onMinimizePane && (
+              <TouchableOpacity
+                style={styles.minimizeButton}
+                onPress={onMinimizePane}
+              >
+                <Text style={styles.minimizeButtonText}>−</Text>
+              </TouchableOpacity>
+            )}
             {canExpand && onTogglePane && (
               <TouchableOpacity
                 style={styles.expandButton}
                 onPress={onTogglePane}
               >
                 <Text style={styles.expandButtonText}>
-                  {isExpanded ? '⤡' : '⤢'}
+                  {isExpanded ? '⤓' : '⤢'}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
+        </View>
+        
+        {/* Controls Row for empty state */}
+        <View style={styles.controlsRow}>
+          <TouchableOpacity
+            style={styles.exportButton}
+            onPress={() => setShowExportModal(true)}
+          >
+            <Text style={styles.exportButtonText}>📤 Export</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No diagram to display</Text>
@@ -288,21 +466,42 @@ export default function DiagramViewer({ svg, dotContent, style, onTogglePane, is
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>📊 Diagram</Text>
+            <Text style={styles.subtitle}>Visual output - automatically generated from YAML</Text>
           </View>
           <View style={styles.headerControls}>
             <Text style={[styles.statusText, { color: '#dc2626' }]}>Render Error</Text>
+            
+            {onMinimizePane && (
+              <TouchableOpacity
+                style={styles.minimizeButton}
+                onPress={onMinimizePane}
+              >
+                <Text style={styles.minimizeButtonText}>−</Text>
+              </TouchableOpacity>
+            )}
             {canExpand && onTogglePane && (
               <TouchableOpacity
                 style={styles.expandButton}
                 onPress={onTogglePane}
               >
                 <Text style={styles.expandButtonText}>
-                  {isExpanded ? '⤡' : '⤢'}
+                  {isExpanded ? '⤓' : '⤢'}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
+        
+        {/* Controls Row for error state */}
+        <View style={styles.controlsRow}>
+          <TouchableOpacity
+            style={styles.exportButton}
+            onPress={() => setShowExportModal(true)}
+          >
+            <Text style={styles.exportButtonText}>📤 Export</Text>
+          </TouchableOpacity>
+        </View>
+        
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Failed to render diagram</Text>
           <Text style={styles.emptySubtext}>
@@ -326,20 +525,33 @@ export default function DiagramViewer({ svg, dotContent, style, onTogglePane, is
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>📊 Diagram</Text>
+            <Text style={styles.subtitle}>Visual output - automatically generated from YAML</Text>
           </View>
           <View style={styles.headerControls}>
-            <Text style={styles.statusText}>DOT Ready for Visualization</Text>
+            {onMinimizePane && (
+              <TouchableOpacity
+                style={styles.minimizeButton}
+                onPress={onMinimizePane}
+              >
+                <Text style={styles.minimizeButtonText}>−</Text>
+              </TouchableOpacity>
+            )}
             {canExpand && onTogglePane && (
               <TouchableOpacity
                 style={styles.expandButton}
                 onPress={onTogglePane}
               >
                 <Text style={styles.expandButtonText}>
-                  {isExpanded ? '⤡' : '⤢'}
+                  {isExpanded ? '⤓' : '⤢'}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
+        </View>
+        
+        {/* Controls Row for web instructions */}
+        <View style={styles.controlsRow}>
+          <Text style={styles.statusText}>DOT Ready for Visualization</Text>
         </View>
 
         <ScrollView style={styles.instructionsContainer}>
@@ -387,45 +599,122 @@ export default function DiagramViewer({ svg, dotContent, style, onTogglePane, is
 
   // Mobile: Show SVG using WebView if available
   return (
-    <View style={[styles.container, style]}>
-      <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>📊 Diagram</Text>
+    <>
+      <View style={[styles.container, style]}>
+        <View style={styles.header}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>📊 Diagram</Text>
+            <Text style={styles.subtitle}>Visual output - automatically generated from YAML</Text>
+          </View>
+          <View style={styles.headerControls}>
+            {canExpand && onTogglePane && (
+              <TouchableOpacity
+                style={styles.expandButton}
+                onPress={onTogglePane}
+              >
+                <Text style={styles.expandButtonText}>
+                  {isExpanded ? '-' : '+'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-        <View style={styles.headerControls}>
-          {canExpand && onTogglePane && (
-            <TouchableOpacity
-              style={styles.expandButton}
-              onPress={onTogglePane}
-            >
-              <Text style={styles.expandButtonText}>
-                {isExpanded ? '-' : '+'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
 
-      {svg ? (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          maximumZoomScale={3}
-          minimumZoomScale={0.2}
-          showsHorizontalScrollIndicator
-          showsVerticalScrollIndicator
-        >
-          <MobileSvgRenderer svgContent={svg} />
-        </ScrollView>
-      ) : (
-        <View style={styles.mobileEmptyContainer}>
-          <Text style={styles.emptyText}>📊 Generating diagram...</Text>
-          <Text style={styles.emptySubtext}>
-            {dotContent ? 'Processing your infrastructure diagram' : 'Enter YAML to see your diagram'}
-          </Text>
+        {svg ? (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            maximumZoomScale={3}
+            minimumZoomScale={0.2}
+            showsHorizontalScrollIndicator
+            showsVerticalScrollIndicator
+          >
+            <MobileSvgRenderer svgContent={svg} />
+          </ScrollView>
+        ) : (
+          <View style={styles.mobileEmptyContainer}>
+            <Text style={styles.emptyText}>📊 Generating diagram...</Text>
+            <Text style={styles.emptySubtext}>
+              {dotContent ? 'Processing your infrastructure diagram' : 'Enter YAML to see your diagram'}
+            </Text>
+          </View>
+        )}
+      </View>
+      
+      {/* Export Modal */}
+      <Modal
+        visible={showExportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExportModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.exportModal}>
+            <Text style={styles.exportModalTitle}>📤 Export Options</Text>
+            <Text style={styles.exportModalSubtitle}>
+              Choose what you'd like to export:
+            </Text>
+            
+            <View style={styles.exportOptions}>
+              <TouchableOpacity
+                style={styles.exportOption}
+                onPress={() => {
+                  setShowExportModal(false);
+                  exportAsImage();
+                }}
+              >
+                <Text style={styles.exportOptionIcon}>🖼️</Text>
+                <View style={styles.exportOptionContent}>
+                  <Text style={styles.exportOptionTitle}>Diagram Image</Text>
+                  <Text style={styles.exportOptionDescription}>
+                    Download the visual diagram as SVG file
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.exportOption}
+                onPress={() => {
+                  setShowExportModal(false);
+                  exportAsYaml();
+                }}
+              >
+                <Text style={styles.exportOptionIcon}>📝</Text>
+                <View style={styles.exportOptionContent}>
+                  <Text style={styles.exportOptionTitle}>YAML Configuration</Text>
+                  <Text style={styles.exportOptionDescription}>
+                    Download the infrastructure config as YAML file
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.exportOption}
+                onPress={() => {
+                  setShowExportModal(false);
+                  exportAsDot();
+                }}
+              >
+                <Text style={styles.exportOptionIcon}>⚙️</Text>
+                <View style={styles.exportOptionContent}>
+                  <Text style={styles.exportOptionTitle}>DOT Notation</Text>
+                  <Text style={styles.exportOptionDescription}>
+                    Download the GraphViz DOT source code
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+            
+            <TouchableOpacity
+              style={styles.exportModalCloseButton}
+              onPress={() => setShowExportModal(false)}
+            >
+              <Text style={styles.exportModalCloseButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      )}
-    </View>
+      </Modal>
+    </>
   );
 }
 
@@ -450,14 +739,69 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
   },
+  subtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+  },
   headerControls: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: ideTheme.spacing.lg,
+    paddingVertical: ideTheme.spacing.md,
+    backgroundColor: ideTheme.colors.light.sidebarBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: ideTheme.colors.light.border,
+    gap: ideTheme.spacing.md,
+  },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  heightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 6,
+    padding: 4,
+    gap: 8,
+    marginLeft: 8,
+  },
+  heightButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  heightButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  heightLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  heightPreset: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
   },
   statusText: {
     color: '#6b7280',
@@ -601,18 +945,49 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-  expandButton: {
-    backgroundColor: '#10b981',
+  minimizeButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
     width: 32,
     height: 32,
-    borderRadius: 6,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 8,
+  },
+  minimizeButtonText: {
+    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  expandButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   expandButtonText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  exportButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  exportButtonText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 12,
+    fontWeight: '500',
   },
 
   scrollView: {
@@ -620,5 +995,77 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  exportModal: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  exportModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 8,
+  },
+  exportModalSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  exportOptions: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  exportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  exportOptionIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  exportOptionContent: {
+    flex: 1,
+  },
+  exportOptionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  exportOptionDescription: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  exportModalCloseButton: {
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  exportModalCloseButtonText: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: '500',
   },
 }); 

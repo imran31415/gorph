@@ -1,6 +1,57 @@
 digraph Infrastructure {
   rankdir=LR;
   node [shape=plaintext, fontname=Helvetica];
+  subgraph cluster_INTEGRATION {
+    label="Integration";
+    Stripe [tooltip="Stripe: Payment API\nStatus: healthy\nOwner: integrations\nEnvironment: production\nTags: [external]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Stripe</B></TD></TR>
+        <TR><TD>Payment API</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    SendGrid [tooltip="SendGrid: Email API\nStatus: healthy\nOwner: integrations\nEnvironment: production\nTags: [external]" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>SendGrid</B></TD></TR>
+        <TR><TD>Email API</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INTERNAL {
+    label="Internal";
+    LoggingService [tooltip="LoggingService: Log aggregator\nStatus: healthy\nOwner: platform\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>LoggingService</B></TD></TR>
+        <TR><TD>Log aggregator</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    MonitoringService [tooltip="MonitoringService: System metrics\nStatus: healthy\nOwner: sre\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>MonitoringService</B></TD></TR>
+        <TR><TD>System metrics</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
+  subgraph cluster_INFRASTRUCTURE {
+    label="Infrastructure";
+    Kubernetes [tooltip="Kubernetes: Orchestrator\nStatus: healthy\nOwner: platform\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Kubernetes</B></TD></TR>
+        <TR><TD>Orchestrator</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+    AWS [tooltip="AWS: Cloud provider\nStatus: healthy\nOwner: devops\nEnvironment: production" label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>AWS</B></TD></TR>
+        <TR><TD>Cloud provider</TD></TR>
+        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
+      </TABLE>
+    >];
+  }
   subgraph cluster_USER_FACING {
     label="User Facing";
     Customer [tooltip="Customer: External customer using the platform\nStatus: healthy\nOwner: product\nEnvironment: production\nTags: [external]" label=<
@@ -103,57 +154,6 @@ digraph Infrastructure {
       <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
         <TR><TD><B>Elasticsearch</B></TD></TR>
         <TR><TD>Search engine</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-  }
-  subgraph cluster_INTEGRATION {
-    label="Integration";
-    Stripe [tooltip="Stripe: Payment API\nStatus: healthy\nOwner: integrations\nEnvironment: production\nTags: [external]" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>Stripe</B></TD></TR>
-        <TR><TD>Payment API</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-    SendGrid [tooltip="SendGrid: Email API\nStatus: healthy\nOwner: integrations\nEnvironment: production\nTags: [external]" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>SendGrid</B></TD></TR>
-        <TR><TD>Email API</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-  }
-  subgraph cluster_INTERNAL {
-    label="Internal";
-    LoggingService [tooltip="LoggingService: Log aggregator\nStatus: healthy\nOwner: platform\nEnvironment: production" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>LoggingService</B></TD></TR>
-        <TR><TD>Log aggregator</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-    MonitoringService [tooltip="MonitoringService: System metrics\nStatus: healthy\nOwner: sre\nEnvironment: production" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>MonitoringService</B></TD></TR>
-        <TR><TD>System metrics</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-  }
-  subgraph cluster_INFRASTRUCTURE {
-    label="Infrastructure";
-    Kubernetes [tooltip="Kubernetes: Orchestrator\nStatus: healthy\nOwner: platform\nEnvironment: production" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>Kubernetes</B></TD></TR>
-        <TR><TD>Orchestrator</TD></TR>
-        <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
-      </TABLE>
-    >];
-    AWS [tooltip="AWS: Cloud provider\nStatus: healthy\nOwner: devops\nEnvironment: production" label=<
-      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">
-        <TR><TD><B>AWS</B></TD></TR>
-        <TR><TD>Cloud provider</TD></TR>
         <TR><TD BGCOLOR="green" HEIGHT="8"></TD></TR>
       </TABLE>
     >];
