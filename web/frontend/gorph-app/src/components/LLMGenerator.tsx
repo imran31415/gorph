@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Modal, Platform } from 'react-native';
 import APIKeyConfig from './APIKeyConfig';
 
 interface LLMGeneratorProps {
@@ -273,24 +273,20 @@ connections: []
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="formSheet">
-      <View style={{ flex: 1, backgroundColor: '#f8fafc', padding: 20 }}>
-        {/* Header */}
+      <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+        {/* Minimal Header */}
         <View style={{ 
           flexDirection: 'row', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          marginBottom: 20,
-          backgroundColor: '#ffffff',
-          padding: 16,
-          borderRadius: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.1,
-          shadowRadius: 2,
-          elevation: 2,
+          paddingHorizontal: 24,
+          paddingTop: 20,
+          paddingBottom: 16,
+          borderBottomWidth: 1,
+          borderBottomColor: '#f1f5f9',
         }}>
-          <Text style={{ color: '#1e293b', fontSize: 24, fontWeight: 'bold' }}>
-            🤖 AI YAML Generator
+          <Text style={{ color: '#1e293b', fontSize: 20, fontWeight: '600' }}>
+            AI Designer
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity 
@@ -298,153 +294,110 @@ connections: []
               style={{ 
                 padding: 8, 
                 marginRight: 8,
-                backgroundColor: '#f3f4f6',
                 borderRadius: 6,
-                borderWidth: 1,
-                borderColor: '#d1d5db'
               }}
             >
-              <Text style={{ color: '#6b7280', fontSize: 14 }}>⚙️</Text>
+              <Text style={{ color: '#6b7280', fontSize: 16 }}>⚙️</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} style={{ padding: 10 }}>
-              <Text style={{ color: '#ef4444', fontSize: 18 }}>✕</Text>
+            <TouchableOpacity onPress={onClose} style={{ padding: 8 }}>
+              <Text style={{ color: '#9ca3af', fontSize: 18 }}>✕</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <ScrollView style={{ flex: 1 }}>
-          {/* API Status Section */}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
+          {/* Minimal API Status */}
           {hasAPIKey && (
             <View style={{
-              backgroundColor: '#ffffff',
-              padding: 15,
+              backgroundColor: '#f8fffe',
+              paddingHorizontal: 16,
+              paddingVertical: 12,
               borderRadius: 8,
-              marginBottom: 20,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 2,
-              elevation: 2,
+              marginBottom: 24,
+              borderLeftWidth: 3,
+              borderLeftColor: '#10b981',
             }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#10b981', fontSize: 14, fontWeight: 'bold', marginBottom: 2 }}>
-                    ✅ AI Provider Configured
-                  </Text>
-                  <Text style={{ color: '#6b7280', fontSize: 12 }}>
-                    {getCurrentProviderName()} • Ready to generate
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => setShowAPIConfig(true)}
-                  style={{
-                    backgroundColor: '#f3f4f6',
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 6,
-                    borderWidth: 1,
-                    borderColor: '#d1d5db'
-                  }}
-                >
-                  <Text style={{ color: '#374151', fontSize: 12, fontWeight: '600' }}>
-                    Change Provider
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={{ color: '#065f46', fontSize: 13, fontWeight: '500' }}>
+                {getCurrentProviderName()} connected
+              </Text>
             </View>
           )}
 
-          {/* API Configuration Warning */}
+          {/* API Setup Notice */}
           {!hasAPIKey && (
             <View style={{
-              backgroundColor: '#fef3c7',
-              padding: 15,
+              backgroundColor: '#fefce8',
+              paddingHorizontal: 16,
+              paddingVertical: 12,
               borderRadius: 8,
-              marginBottom: 20,
-              borderLeftWidth: 4,
-              borderLeftColor: '#f59e0b',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 2,
-              elevation: 2,
+              marginBottom: 24,
+              borderLeftWidth: 3,
+              borderLeftColor: '#eab308',
             }}>
-              <Text style={{ color: '#92400e', fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
-                🔐 API Key Required
-              </Text>
-              <Text style={{ color: '#b45309', fontSize: 14, marginBottom: 10 }}>
-                To use AI generation, you need to configure an API key from OpenAI, Anthropic, or Google Gemini.
+              <Text style={{ color: '#713f12', fontSize: 13, fontWeight: '500', marginBottom: 8 }}>
+                API key required
               </Text>
               <TouchableOpacity
                 onPress={() => setShowAPIConfig(true)}
                 style={{
                   backgroundColor: '#1e293b',
-                  padding: 12,
+                  paddingVertical: 8,
+                  paddingHorizontal: 12,
                   borderRadius: 6,
-                  alignItems: 'center'
+                  alignSelf: 'flex-start'
                 }}
               >
-                <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: 'bold' }}>
-                  ⚙️ Configure API Key
+                <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '500' }}>
+                  Setup
                 </Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Examples Section */}
+          {/* Quick Examples */}
           {showExamples && hasAPIKey && (
-            <View style={{ 
-              marginBottom: 20,
-              backgroundColor: '#ffffff',
-              padding: 16,
-              borderRadius: 8,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 2,
-              elevation: 2,
-            }}>
-              <Text style={{ color: '#1e293b', fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
-                💡 Try These Examples:
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ color: '#6b7280', fontSize: 14, fontWeight: '500', marginBottom: 12, textAlign: 'center' }}>
+                Try an example:
               </Text>
-              {EXAMPLES.map((example, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => handleExampleClick(example)}
-                  style={{
-                    backgroundColor: '#f8fafc',
-                    padding: 15,
-                    borderRadius: 8,
-                    marginBottom: 10,
-                    borderLeftWidth: 4,
-                    borderLeftColor: '#10b981'
-                  }}
-                >
-                  <Text style={{ color: '#059669', fontSize: 16, fontWeight: 'bold' }}>
-                    {example.title}
-                  </Text>
-                  <Text style={{ color: '#6b7280', fontSize: 14, marginTop: 5 }}>
-                    {example.description}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}>
+                {EXAMPLES.map((example, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handleExampleClick(example)}
+                    style={{
+                      backgroundColor: '#f1f5f9',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: '#e2e8f0',
+                    }}
+                  >
+                    <Text style={{ color: '#475569', fontSize: 13, fontWeight: '500' }}>
+                      {example.title}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
 
-          {/* Input Section */}
+          {/* Clean Input Section */}
           <View style={{ 
-            marginBottom: 20,
-            backgroundColor: '#ffffff',
-            padding: 16,
-            borderRadius: 8,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 2,
-            elevation: 2,
+            marginBottom: 32, 
+            maxWidth: 600, 
+            alignSelf: 'center', 
+            width: '100%' 
           }}>
-            <Text style={{ color: '#1e293b', fontSize: 16, marginBottom: 10, fontWeight: '600' }}>
-              📝 Describe Your System:
+            <Text style={{ 
+              color: '#1e293b', 
+              fontSize: 18, 
+              marginBottom: 16, 
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              Describe your infrastructure
             </Text>
             <TextInput
               value={userInput}
@@ -452,35 +405,52 @@ connections: []
               placeholder="e.g., Design a graph of a car engine operation..."
               placeholderTextColor="#9ca3af"
               multiline
-              numberOfLines={4}
               style={{
-                backgroundColor: '#f8fafc',
+                backgroundColor: '#fafbfc',
                 color: '#1e293b',
-                padding: 15,
-                borderRadius: 8,
+                padding: 20,
+                borderRadius: 12,
                 borderWidth: 1,
-                borderColor: '#e5e7eb',
+                borderColor: '#e2e8f0',
                 fontSize: 16,
-                textAlignVertical: 'top'
+                textAlignVertical: 'top',
+                minHeight: 120,
+                lineHeight: 24,
+                fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
               }}
             />
           </View>
 
-          {/* Action Buttons */}
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+          {/* Clean Action Buttons */}
+          <View style={{ 
+            marginBottom: 20, 
+            maxWidth: 400, 
+            alignSelf: 'center', 
+            width: '100%' 
+          }}>
             <TouchableOpacity
               onPress={handleGenerate}
               disabled={!userInput.trim() || isGenerating || !hasAPIKey}
               style={{
-                flex: 1,
-                backgroundColor: userInput.trim() && !isGenerating && hasAPIKey ? '#10b981' : '#d1d5db',
-                padding: 15,
-                borderRadius: 8,
-                alignItems: 'center'
+                backgroundColor: userInput.trim() && !isGenerating && hasAPIKey ? '#6366f1' : '#e5e7eb',
+                paddingVertical: 16,
+                paddingHorizontal: 24,
+                borderRadius: 10,
+                alignItems: 'center',
+                marginBottom: 12,
+                shadowColor: userInput.trim() && !isGenerating && hasAPIKey ? '#6366f1' : 'transparent',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
               }}
             >
-              <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold' }}>
-                {isGenerating ? '🤖 Generating...' : !hasAPIKey ? '🔐 Configure API First' : '✨ Generate YAML'}
+              <Text style={{ 
+                color: userInput.trim() && !isGenerating && hasAPIKey ? '#ffffff' : '#9ca3af', 
+                fontSize: 16, 
+                fontWeight: '600' 
+              }}>
+                {isGenerating ? 'Generating...' : !hasAPIKey ? 'Configure API First' : 'Generate Infrastructure'}
               </Text>
             </TouchableOpacity>
 
@@ -489,15 +459,16 @@ connections: []
                 onPress={handleRefine}
                 disabled={!userInput.trim() || isGenerating}
                 style={{
-                  flex: 1,
                   backgroundColor: '#f59e0b',
-                  padding: 15,
+                  paddingVertical: 12,
+                  paddingHorizontal: 20,
                   borderRadius: 8,
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  marginBottom: 8,
                 }}
               >
-                <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold' }}>
-                  🔄 Refine
+                <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '500' }}>
+                  Refine Result
                 </Text>
               </TouchableOpacity>
             )}
@@ -505,14 +476,15 @@ connections: []
             <TouchableOpacity
               onPress={handleClear}
               style={{
-                backgroundColor: '#ef4444',
-                padding: 15,
-                borderRadius: 8,
-                alignItems: 'center'
+                backgroundColor: 'transparent',
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                borderRadius: 6,
+                alignItems: 'center',
               }}
             >
-              <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold' }}>
-                🗑️ Clear
+              <Text style={{ color: '#6b7280', fontSize: 14, fontWeight: '500' }}>
+                Clear
               </Text>
             </TouchableOpacity>
           </View>

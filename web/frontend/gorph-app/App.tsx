@@ -48,7 +48,11 @@ function AppInner() {
   const [wasmError, setWasmError] = useState<string | null>(null);
   const [dotOutput, setDotOutput] = useState('');
   const [svgOutput, setSvgOutput] = useState('');
-  const [activeTab, setActiveTab] = useState<'yaml' | 'dot' | 'diagram' | 'builder'>('builder');
+  
+  // Get screen dimensions to determine initial tab
+  const { width } = Dimensions.get('window');
+  const isMobile = width < 768;
+  const [activeTab, setActiveTab] = useState<'yaml' | 'dot' | 'diagram' | 'builder'>(isMobile ? 'diagram' : 'builder');
   const [isLandscape, setIsLandscape] = useState(false);
   const [templates, setTemplates] = useState<Record<string, any>>({});
   const [showHistory, setShowHistory] = useState(false);
