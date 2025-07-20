@@ -72,6 +72,24 @@ export const LLMGenerator: React.FC<LLMGeneratorProps> = ({ onYamlGenerated, onC
     return 'Unknown';
   };
 
+  // Clean generated YAML from markdown formatting
+  const cleanGeneratedYaml = (rawYaml: string): string => {
+    let cleaned = rawYaml.trim();
+    
+    // Remove markdown code block formatting
+    if (cleaned.startsWith('```yaml')) {
+      cleaned = cleaned.substring(7); // Remove ```yaml
+    } else if (cleaned.startsWith('```')) {
+      cleaned = cleaned.substring(3); // Remove ```
+    }
+    
+    if (cleaned.endsWith('```')) {
+      cleaned = cleaned.substring(0, cleaned.length - 3); // Remove ending ```
+    }
+    
+    return cleaned.trim();
+  };
+
   const generateYamlFromDescription = async (description: string, isRefinement: boolean = false) => {
     setIsGenerating(true);
     
@@ -82,18 +100,20 @@ export const LLMGenerator: React.FC<LLMGeneratorProps> = ({ onYamlGenerated, onC
       const response = await callLLMAPI(prompt);
       
       if (response.yaml) {
-        setGeneratedYaml(response.yaml);
+        // Clean the YAML from markdown formatting
+        const cleanedYaml = cleanGeneratedYaml(response.yaml);
+        setGeneratedYaml(cleanedYaml);
         
         // Add to conversation history
         const newHistory = [
           ...conversationHistory,
           { role: 'user' as const, content: description },
-          { role: 'assistant' as const, content: response.yaml }
+          { role: 'assistant' as const, content: cleanedYaml }
         ];
         setConversationHistory(newHistory);
         
-        // Validate the generated YAML
-        await validateGeneratedYaml(response.yaml);
+        // Validate the cleaned YAML
+        await validateGeneratedYaml(cleanedYaml);
       }
     } catch (error) {
       console.error('LLM Generation Error:', error);
@@ -114,7 +134,8 @@ export const LLMGenerator: React.FC<LLMGeneratorProps> = ({ onYamlGenerated, onC
       
       if (prompt.toLowerCase().includes('car engine') || prompt.toLowerCase().includes('engine operation')) {
         return {
-          yaml: `entities:
+          yaml: `\`\`\`yaml
+entities:
   - id: AirIntake
     category: NETWORK
     description: "Air intake system providing oxygen for combustion"
@@ -185,12 +206,14 @@ connections:
     type: Service_Call
   - from: CombustionChamber
     to: ExhaustSystem
-    type: Service_Call`
+    type: Service_Call
+\`\`\``
         };
       }
       
       return {
-        yaml: `entities:
+        yaml: `\`\`\`yaml
+entities:
   - id: UserDescription
     category: USER_FACING
     description: "Generated from: ${prompt.substring(0, 100)}..."
@@ -198,7 +221,8 @@ connections:
     owner: ai-generated
     environment: production
 
-connections: []`
+connections: []
+\`\`\``
       };
     }
 
@@ -233,7 +257,9 @@ connections: []`
 
   const handleUseYaml = () => {
     if (generatedYaml) {
-      onYamlGenerated(generatedYaml);
+      // Extra safety: ensure YAML is clean before using
+      const finalYaml = cleanGeneratedYaml(generatedYaml);
+      onYamlGenerated(finalYaml);
       onClose();
     }
   };
@@ -504,24 +530,38 @@ connections: []`
               shadowRadius: 2,
               elevation: 2,
             }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <Text style={{ color: '#1e293b', fontSize: 16, fontWeight: 'bold' }}>
-                  📄 Generated YAML:
+              <View style={{ marginBottom: 15 }}>
+                <Text style={{ color: '#1e293b', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
+                  🎉 Your YAML is Ready!
                 </Text>
                 <TouchableOpacity
                   onPress={handleUseYaml}
                   style={{
                     backgroundColor: '#10b981',
-                    padding: 10,
-                    borderRadius: 6
+                    paddingVertical: 16,
+                    paddingHorizontal: 24,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    shadowColor: '#10b981',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 6,
+                    marginBottom: 15
                   }}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: 'bold' }}>
+                  <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: 'bold' }}>
                     ✅ Use This YAML
+                  </Text>
+                  <Text style={{ color: '#ffffff', fontSize: 14, opacity: 0.9, marginTop: 4 }}>
+                    Apply to your diagram
                   </Text>
                 </TouchableOpacity>
               </View>
               
+              <Text style={{ color: '#6b7280', fontSize: 14, fontWeight: '600', marginBottom: 8 }}>
+                📄 Generated YAML Preview:
+              </Text>
               <ScrollView 
                 style={{
                   backgroundColor: '#f1f5f9',
