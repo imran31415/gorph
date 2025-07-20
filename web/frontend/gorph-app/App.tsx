@@ -546,12 +546,22 @@ connections:
 
   // Handle LLM-generated YAML
   const handleLLMYamlGenerated = (generatedYaml: string) => {
-    console.log('🤖 LLM YAML generated');
-    setYamlInput(generatedYaml, 'template', 'Generated with AI');
-    setShowLLMGenerator(false);
+    console.log('🤖 LLM YAML generated, applying to diagram...');
     
-    // Switch to diagram tab to show the result
+    // Force the update by directly calling updateYaml
+    if (activeDiagram) {
+      // Update existing diagram
+      updateYaml(generatedYaml, 'template', 'Generated with AI');
+    } else {
+      // Create new diagram with AI content
+      createNewDiagram('AI Generated Diagram', generatedYaml);
+    }
+    
+    // Close modal and switch to diagram view
+    setShowLLMGenerator(false);
     setActiveTab('diagram');
+    
+    console.log('🤖 AI YAML applied successfully');
   };
 
   // Helper function to get template display names

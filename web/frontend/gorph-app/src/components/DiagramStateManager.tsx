@@ -235,7 +235,10 @@ export const DiagramStateProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Update YAML with change tracking
   const updateYaml = useCallback((yamlContent: string, changeType: DiagramChange['changeType'], description?: string) => {
-    if (!activeDiagram) return;
+    if (!activeDiagram) {
+      console.error('Cannot update YAML - no active diagram');
+      return;
+    }
 
     const timestamp = Date.now();
     const change: DiagramChange = {
@@ -249,6 +252,11 @@ export const DiagramStateProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     setSession(prev => {
       const diagram = prev.diagrams[activeDiagram.id];
+      
+      if (!diagram) {
+        console.error('Diagram not found in session');
+        return prev;
+      }
       
       // Truncate history if we're not at the end (for new changes after undo)
       const newHistory = [...diagram.changeHistory.slice(0, diagram.currentChangeIndex + 1), change];
