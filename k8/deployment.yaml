@@ -12,11 +12,13 @@ spec:
     matchLabels:
       app: gorph
       component: frontend
+      version: v1.0.0
   template:
     metadata:
       labels:
         app: gorph
         component: frontend
+        version: v1.0.0
     spec:
       containers:
       - name: gorph-frontend

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet, Dimensions, Platform } from 'react-native';
 
 interface OnboardingModalProps {
   visible: boolean;
@@ -10,6 +10,19 @@ interface OnboardingModalProps {
 
 export default function OnboardingModal({ visible, onClose, templates, onSelectTemplate }: OnboardingModalProps) {
   const [currentStep, setCurrentStep] = useState<'welcome' | 'how-it-works' | 'templates'>('welcome');
+  const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
+
+  // Track screen dimensions for Safari mobile viewport changes
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenDimensions(window);
+    });
+    return () => subscription?.remove();
+  }, []);
+
+  // Calculate safe modal height for mobile Safari
+  const isMobile = Platform.OS !== 'web' || screenDimensions.width < 768;
+  const isVeryShortScreen = screenDimensions.height < 600;
   
 
   
@@ -29,35 +42,37 @@ export default function OnboardingModal({ visible, onClose, templates, onSelectT
 
   const renderWelcomeStep = () => (
     <View style={styles.stepContent}>
-      <View style={styles.welcomeHeader}>
-        <Text style={styles.welcomeIcon}>🎯</Text>
-        <Text style={styles.welcomeTitle}>Welcome to Gorph!</Text>
-        <Text style={styles.welcomeSubtitle}>
-          Infrastructure visualization made simple
-        </Text>
-      </View>
-      
-      <View style={styles.welcomeDescription}>
-        <Text style={styles.descriptionText}>
-          Gorph helps you create beautiful infrastructure diagrams from simple YAML definitions. 
-          Whether you're documenting existing systems or designing new ones, we make it easy.
-        </Text>
-      </View>
-      
-      <View style={styles.features}>
-        <View style={styles.feature}>
-          <Text style={styles.featureIcon}>🎛️</Text>
-          <Text style={styles.featureText}>Visual Builder</Text>
+      <ScrollView style={styles.welcomeScrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.welcomeHeader}>
+          <Text style={styles.welcomeIcon}>🎯</Text>
+          <Text style={styles.welcomeTitle}>Welcome to Gorph!</Text>
+          <Text style={styles.welcomeSubtitle}>
+            Infrastructure visualization made simple
+          </Text>
         </View>
-        <View style={styles.feature}>
-          <Text style={styles.featureIcon}>📝</Text>
-          <Text style={styles.featureText}>YAML Editor</Text>
+        
+        <View style={styles.welcomeDescription}>
+          <Text style={styles.descriptionText}>
+            Gorph helps you create beautiful infrastructure diagrams from simple YAML definitions. 
+            Whether you're documenting existing systems or designing new ones, we make it easy.
+          </Text>
         </View>
-        <View style={styles.feature}>
-          <Text style={styles.featureIcon}>📊</Text>
-          <Text style={styles.featureText}>Live Diagrams</Text>
+        
+        <View style={styles.features}>
+          <View style={styles.feature}>
+            <Text style={styles.featureIcon}>🎛️</Text>
+            <Text style={styles.featureText}>Visual Builder</Text>
+          </View>
+          <View style={styles.feature}>
+            <Text style={styles.featureIcon}>📝</Text>
+            <Text style={styles.featureText}>YAML Editor</Text>
+          </View>
+          <View style={styles.feature}>
+            <Text style={styles.featureIcon}>📊</Text>
+            <Text style={styles.featureText}>Live Diagrams</Text>
+          </View>
         </View>
-      </View>
+      </ScrollView>
       
       <View style={styles.stepButtons}>
         <TouchableOpacity
@@ -258,7 +273,11 @@ export default function OnboardingModal({ visible, onClose, templates, onSelectT
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
+        <View style={[
+          styles.modalContainer,
+          isMobile && styles.modalContainerMobile,
+          isVeryShortScreen && styles.modalContainerShort
+        ]}>
           {/* Progress Indicator */}
           <View style={styles.progressContainer}>
             <View style={[styles.progressDot, currentStep === 'welcome' && styles.progressDotActive]} />
@@ -291,14 +310,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    paddingTop: 60, // Extra top padding for mobile
+    paddingBottom: 60, // Extra bottom padding for mobile
   },
   modalContainer: {
     backgroundColor: 'white',
     borderRadius: 16,
     width: '100%',
     maxWidth: 600,
-    maxHeight: '90%',
+    maxHeight: '85%',
     position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+  },
+  modalContainerMobile: {
+    margin: 10,
+    maxWidth: '96%',
+    maxHeight: '82%',
+  },
+  modalContainerShort: {
+    maxHeight: '78%',
   },
   progressContainer: {
     flexDirection: 'row',
@@ -321,6 +353,14 @@ const styles = StyleSheet.create({
   stepContent: {
     flex: 1,
     padding: 24,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    minHeight: 0,
+    overflow: 'auto',
+  },
+  welcomeScrollContent: {
+    flex: 1,
   },
   welcomeHeader: {
     alignItems: 'center',
@@ -343,7 +383,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   welcomeDescription: {
-    marginBottom: 32,
+    marginBottom: 24,
+    flex: 1,
   },
   descriptionText: {
     fontSize: 16,
@@ -354,7 +395,8 @@ const styles = StyleSheet.create({
   features: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 32,
+    marginBottom: 16,
+    flexShrink: 0,
   },
   feature: {
     alignItems: 'center',
@@ -502,6 +544,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
+    marginTop: 20,
+    flexShrink: 0,
   },
   primaryButton: {
     flex: 1,
@@ -545,14 +589,20 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   closeButtonText: {
     fontSize: 20,

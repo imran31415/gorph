@@ -1052,7 +1052,7 @@ connections:
         <View style={styles.mobileContent}>
           {activeTab === 'yaml' && (
             <YamlEditor
-              key={`yaml-editor-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
+              key={`yaml-editor-${activeDiagram?.id}`}
               value={yamlInput}
               onChange={(yaml) => setYamlInput(yaml, 'manual')}
               style={styles.fullPane}
@@ -1070,7 +1070,7 @@ connections:
           
           {activeTab === 'diagram' && (
             <DiagramViewer
-              key={`diagram-viewer-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
+              key={`diagram-viewer-${activeDiagram?.id}`}
               svg={svgOutput}
               dotContent={dotOutput}
               yamlContent={yamlInput}
@@ -1080,7 +1080,7 @@ connections:
           
           {activeTab === 'builder' && (
             <Builder
-              key={`builder-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
+              key={`builder-${activeDiagram?.id}`}
               yamlContent={yamlInput}
               onYamlChange={(yaml) => setYamlInput(yaml, 'builder')}
               svgOutput={svgOutput}
@@ -1206,7 +1206,7 @@ connections:
             }
           ]}>
             <Builder
-              key={`builder-desktop-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
+              key={`builder-desktop-${activeDiagram?.id}`}
               yamlContent={yamlInput}
               onYamlChange={(yaml) => setYamlInput(yaml, 'builder')}
               svgOutput={svgOutput}
@@ -1240,7 +1240,7 @@ connections:
             }
           ]}>
             <YamlEditor
-              key={`yaml-editor-desktop-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
+              key={`yaml-editor-desktop-${activeDiagram?.id}`}
               value={yamlInput}
               onChange={(yaml) => setYamlInput(yaml, 'manual')}
               style={{ flex: 1, minHeight: 0 }}
@@ -1301,7 +1301,7 @@ connections:
             }
           ]}>
             <DiagramViewer
-              key={`diagram-viewer-desktop-${activeDiagram?.id}-${activeDiagram?.lastModified}`}
+              key={`diagram-viewer-desktop-${activeDiagram?.id}`}
               svg={svgOutput}
               dotContent={dotOutput}
               yamlContent={yamlInput}

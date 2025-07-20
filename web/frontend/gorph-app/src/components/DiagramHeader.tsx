@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  Dimensions,
 } from 'react-native';
 import { useDiagramState } from './DiagramStateManager';
 import { ideTheme } from '../theme/ideTheme';
@@ -45,6 +46,20 @@ export default function DiagramHeader({ onShowHistory, onTemplatePress }: Diagra
   const [newDiagramName, setNewDiagramName] = useState('');
   const [renameName, setRenameName] = useState('');
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+
+  // Track screen width for responsive layout
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription?.remove();
+  }, []);
+
+  // Determine if we should show compact layout (mobile screens)
+  const isVerySmallScreen = screenWidth < 500;
+  const isSmallScreen = screenWidth < 600;
+  const isMobileScreen = screenWidth < 768;
 
   const handleCreateDiagram = () => {
     const name = newDiagramName.trim() || undefined;
@@ -110,7 +125,11 @@ export default function DiagramHeader({ onShowHistory, onTemplatePress }: Diagra
         {/* Templates Button */}
         {onTemplatePress && (
           <TouchableOpacity
-            style={[styles.controlButton, styles.templatesButton]}
+            style={[
+              styles.controlButton, 
+              styles.templatesButton,
+              isSmallScreen && styles.templatesButtonCompact
+            ]}
             onPress={() => {
               console.log('📋 DiagramHeader: Template button clicked!');
               console.log('📋 DiagramHeader: onTemplatePress function:', typeof onTemplatePress);
@@ -124,7 +143,9 @@ export default function DiagramHeader({ onShowHistory, onTemplatePress }: Diagra
             }}
           >
             <Text style={styles.templatesIcon}>📋</Text>
-            <Text style={styles.templatesText}>Templates</Text>
+            {!isSmallScreen && (
+              <Text style={styles.templatesText}>Templates</Text>
+            )}
           </TouchableOpacity>
         )}
 
@@ -306,7 +327,10 @@ export default function DiagramHeader({ onShowHistory, onTemplatePress }: Diagra
         onRequestClose={() => setShowHowItWorksModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.howItWorksModal}>
+          <View style={[
+            styles.howItWorksModal,
+            isSmallScreen && styles.howItWorksModalMobile
+          ]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>🎓 How It Works</Text>
               <Text style={styles.modalSubtitle}>
@@ -314,81 +338,87 @@ export default function DiagramHeader({ onShowHistory, onTemplatePress }: Diagra
               </Text>
             </View>
 
-            <View style={styles.workflowContainer}>
-              <View style={styles.workflowStep}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>1</Text>
+            <ScrollView 
+              style={styles.modalScrollContainer}
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={styles.modalScrollContent}
+            >
+              <View style={styles.workflowContainer}>
+                <View style={styles.workflowStep}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>1</Text>
+                  </View>
+                  <View style={styles.stepContent}>
+                    <Text style={styles.stepTitle}>🎛️ Builder OR 📝 YAML</Text>
+                    <Text style={styles.stepDescription}>
+                      Choose your approach: Use the Builder for visual editing OR edit YAML directly for precise control
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>🎛️ Builder OR 📝 YAML</Text>
-                  <Text style={styles.stepDescription}>
-                    Choose your approach: Use the Builder for visual editing OR edit YAML directly for precise control
-                  </Text>
+                
+                <View style={styles.workflowArrow}>
+                  <Text style={styles.arrowText}>↓ generates/updates</Text>
+                </View>
+                
+                <View style={styles.workflowStep}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>2</Text>
+                  </View>
+                  <View style={styles.stepContent}>
+                    <Text style={styles.stepTitle}>📝 YAML (Master Config)</Text>
+                    <Text style={styles.stepDescription}>
+                      The single source of truth - updated live from Builder changes or direct editing
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.workflowArrow}>
+                  <Text style={styles.arrowText}>↓ compiles to</Text>
+                </View>
+                
+                <View style={styles.workflowStep}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>3</Text>
+                  </View>
+                  <View style={styles.stepContent}>
+                    <Text style={styles.stepTitle}>⚙️ DOT (GraphViz)</Text>
+                    <Text style={styles.stepDescription}>
+                      Technical notation used by GraphViz to describe graph structures
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.workflowArrow}>
+                  <Text style={styles.arrowText}>↓ renders to</Text>
+                </View>
+                
+                <View style={styles.workflowStep}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>4</Text>
+                  </View>
+                  <View style={styles.stepContent}>
+                    <Text style={styles.stepTitle}>📊 Diagram (Visual)</Text>
+                    <Text style={styles.stepDescription}>
+                      Beautiful visual representation of your infrastructure
+                    </Text>
+                  </View>
                 </View>
               </View>
               
-              <View style={styles.workflowArrow}>
-                <Text style={styles.arrowText}>↓ generates/updates</Text>
+              <View style={styles.tutorialTip}>
+                <Text style={styles.tipIcon}>💡</Text>
+                <Text style={styles.tipText}>
+                  <Text style={styles.tipBold}>Flexible Workflow:</Text> You can work in any tab! Use the Builder for a visual interface or edit YAML directly - all tabs stay synchronized with live updates.
+                </Text>
               </View>
               
-              <View style={styles.workflowStep}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>2</Text>
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>📝 YAML (Master Config)</Text>
-                  <Text style={styles.stepDescription}>
-                    The single source of truth - updated live from Builder changes or direct editing
-                  </Text>
-                </View>
+              <View style={styles.tutorialTip}>
+                <Text style={styles.tipIcon}>📁</Text>
+                <Text style={styles.tipText}>
+                  <Text style={styles.tipBold}>Multiple Diagrams:</Text> Create multiple diagram versions using this top bar. Access your change history with the history button to see all modifications and revert if needed.
+                </Text>
               </View>
-              
-              <View style={styles.workflowArrow}>
-                <Text style={styles.arrowText}>↓ compiles to</Text>
-              </View>
-              
-              <View style={styles.workflowStep}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>3</Text>
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>⚙️ DOT (GraphViz)</Text>
-                  <Text style={styles.stepDescription}>
-                    Technical notation used by GraphViz to describe graph structures
-                  </Text>
-                </View>
-              </View>
-              
-              <View style={styles.workflowArrow}>
-                <Text style={styles.arrowText}>↓ renders to</Text>
-              </View>
-              
-              <View style={styles.workflowStep}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>4</Text>
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>📊 Diagram (Visual)</Text>
-                  <Text style={styles.stepDescription}>
-                    Beautiful visual representation of your infrastructure
-                  </Text>
-                </View>
-              </View>
-            </View>
-            
-            <View style={styles.tutorialTip}>
-              <Text style={styles.tipIcon}>💡</Text>
-              <Text style={styles.tipText}>
-                <Text style={styles.tipBold}>Flexible Workflow:</Text> You can work in any tab! Use the Builder for a visual interface or edit YAML directly - all tabs stay synchronized with live updates.
-              </Text>
-            </View>
-            
-            <View style={styles.tutorialTip}>
-              <Text style={styles.tipIcon}>📁</Text>
-              <Text style={styles.tipText}>
-                <Text style={styles.tipBold}>Multiple Diagrams:</Text> Create multiple diagram versions using this top bar. Access your change history with the history button to see all modifications and revert if needed.
-              </Text>
-            </View>
+            </ScrollView>
 
             <TouchableOpacity
               style={styles.closeButton}
@@ -408,8 +438,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: ideTheme.spacing.xl,
-    paddingVertical: ideTheme.spacing.lg,
+    paddingHorizontal: ideTheme.spacing.lg,
+    paddingVertical: ideTheme.spacing.md,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
@@ -418,23 +448,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
-    minHeight: 72,
+    minHeight: 64,
+    flexWrap: 'wrap',
   },
   leftSection: {
     flex: 1,
-    maxWidth: '50%',
+    maxWidth: '65%',
+    minWidth: 200,
+    marginRight: 8,
   },
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   diagramButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -443,8 +478,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
-    minHeight: 48,
-    maxWidth: 280,
+    minHeight: 44,
+    maxWidth: 320,
     flex: 1,
   },
   diagramIcon: {
@@ -512,10 +547,10 @@ const styles = StyleSheet.create({
   },
   undoRedoGroup: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
     backgroundColor: '#f1f5f9',
-    borderRadius: 14,
-    padding: 4,
+    borderRadius: 12,
+    padding: 2,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
@@ -743,9 +778,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 16,
-    minWidth: 100,
+    paddingHorizontal: 14,
+    minWidth: 90,
+    maxWidth: 140,
     justifyContent: 'center',
+    flexShrink: 1,
+    overflow: 'hidden',
+  },
+  templatesButtonCompact: {
+    minWidth: 44,
+    maxWidth: 44,
+    paddingHorizontal: 0,
+    width: 44,
+    flexShrink: 0,
   },
   templatesIcon: {
     fontSize: 16,
@@ -768,11 +813,25 @@ const styles = StyleSheet.create({
     margin: 20,
     width: '85%',
     maxWidth: 400,
+    maxHeight: '80%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
     elevation: 12,
+  },
+  howItWorksModalMobile: {
+    margin: 16,
+    padding: 16,
+    width: '90%',
+    maxHeight: '85%',
+  },
+  modalScrollContainer: {
+    flex: 1,
+    maxHeight: 400,
+  },
+  modalScrollContent: {
+    paddingBottom: 16,
   },
   workflowContainer: {
     marginBottom: 24,

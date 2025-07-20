@@ -369,6 +369,34 @@ func getConnectionAttributes(connType string, style *StyleConfig) string {
 	return ", " + strings.Join(attrs, ", ")
 }
 
+// isValidEntityID validates that an entity ID follows GraphViz-compatible naming rules
+// - Must start with a letter (a-z, A-Z)
+// - Can contain letters, numbers, and underscores
+// - Cannot contain dashes (hyphens) as they cause GraphViz rendering issues
+func isValidEntityID(id string) bool {
+	if len(id) == 0 {
+		return false
+	}
+
+	// Must start with a letter
+	if !((id[0] >= 'a' && id[0] <= 'z') || (id[0] >= 'A' && id[0] <= 'Z')) {
+		return false
+	}
+
+	// Check remaining characters
+	for i := 1; i < len(id); i++ {
+		char := id[i]
+		if !((char >= 'a' && char <= 'z') ||
+			(char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') ||
+			char == '_') {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Validation function
 func validateInfrastructure(infra *Infrastructure) []string {
 	var errors []string
@@ -383,6 +411,11 @@ func validateInfrastructure(infra *Infrastructure) []string {
 		if entity.ID == "" {
 			errors = append(errors, fmt.Sprintf("Entity %d: ID is required", i))
 			continue
+		}
+
+		// Validate ID format - no dashes allowed for GraphViz compatibility
+		if !isValidEntityID(entity.ID) {
+			errors = append(errors, fmt.Sprintf("Entity %s: ID contains invalid characters. IDs must start with a letter and contain only letters, numbers, and underscores. Dashes are not allowed due to GraphViz compatibility requirements.", entity.ID))
 		}
 
 		if entityIds[entity.ID] {
@@ -407,14 +440,24 @@ func validateInfrastructure(infra *Infrastructure) []string {
 	for i, conn := range infra.Connections {
 		if conn.From == "" {
 			errors = append(errors, fmt.Sprintf("Connection %d: From is required", i))
-		} else if !entityIds[conn.From] {
-			errors = append(errors, fmt.Sprintf("Connection %d: From entity '%s' does not exist", i, conn.From))
+		} else {
+			if !isValidEntityID(conn.From) {
+				errors = append(errors, fmt.Sprintf("Connection %d: From entity ID '%s' contains invalid characters. IDs must start with a letter and contain only letters, numbers, and underscores.", i, conn.From))
+			}
+			if !entityIds[conn.From] {
+				errors = append(errors, fmt.Sprintf("Connection %d: From entity '%s' does not exist", i, conn.From))
+			}
 		}
 
 		if conn.To == "" {
 			errors = append(errors, fmt.Sprintf("Connection %d: To is required", i))
-		} else if !entityIds[conn.To] {
-			errors = append(errors, fmt.Sprintf("Connection %d: To entity '%s' does not exist", i, conn.To))
+		} else {
+			if !isValidEntityID(conn.To) {
+				errors = append(errors, fmt.Sprintf("Connection %d: To entity ID '%s' contains invalid characters. IDs must start with a letter and contain only letters, numbers, and underscores.", i, conn.To))
+			}
+			if !entityIds[conn.To] {
+				errors = append(errors, fmt.Sprintf("Connection %d: To entity '%s' does not exist", i, conn.To))
+			}
 		}
 
 		if conn.Type == "" {

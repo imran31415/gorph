@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, Modal, Dimensions, Share } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { ideTheme } from '../theme/ideTheme';
 
@@ -63,20 +63,23 @@ function MobileSvgRenderer({ svgContent }: { svgContent: string }) {
     <html>
       <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0, minimum-scale=0.5">
         <style>
           body {
             margin: 0;
-            padding: 20px;
+            padding: 10px;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
             background-color: #ffffff;
+            overflow: auto;
           }
           svg {
-            max-width: 100%;
+            max-width: none;
+            width: auto;
             height: auto;
+            display: block;
           }
         </style>
       </head>
@@ -90,12 +93,13 @@ function MobileSvgRenderer({ svgContent }: { svgContent: string }) {
     <WebView
       source={{ html }}
       style={{ flex: 1, minHeight: 400 }}
-      scalesPageToFit={true}
+      scalesPageToFit={false}
       startInLoadingState={true}
       javaScriptEnabled={false}
-      scrollEnabled={true}
+      scrollEnabled={false}
       showsVerticalScrollIndicator={false}
       showsHorizontalScrollIndicator={false}
+      bounces={false}
     />
   );
 }
@@ -107,17 +111,62 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
   const [isRendering, setIsRendering] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [mobileZoom, setMobileZoom] = useState(1);
+  const [screenData, setScreenData] = useState(Dimensions.get('window'));
+
+  useEffect(() => {
+    const onChange = (result: any) => {
+      setScreenData(result.window);
+    };
+    const subscription = Dimensions.addEventListener('change', onChange);
+    return () => subscription?.remove();
+  }, []);
+
+  const isMobile = Platform.OS !== 'web' || screenData.width < 768;
 
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 0.2, 3));
+    if (Platform.OS === 'web') {
+      setZoom(prev => Math.min(prev + 0.2, 3));
+    } else {
+      // For mobile, we'll use ScrollView's built-in zoom
+      const newZoom = Math.min(mobileZoom + 0.5, 3);
+      setMobileZoom(newZoom);
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: true });
+      }
+    }
   };
 
   const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 0.2, 0.2));
+    if (Platform.OS === 'web') {
+      setZoom(prev => Math.max(prev - 0.2, 0.3));
+    } else {
+      const newZoom = Math.max(mobileZoom - 0.5, 0.5);
+      setMobileZoom(newZoom);
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: true });
+      }
+    }
   };
 
   const handleZoomReset = () => {
-    setZoom(1);
+    if (Platform.OS === 'web') {
+      setZoom(1);
+    } else {
+      setMobileZoom(1);
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: true });
+      }
+    }
+  };
+
+  // Mouse wheel zoom for web
+  const handleWheel = (e: any) => {
+    if (Platform.OS === 'web' && e.ctrlKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom(prev => Math.max(0.3, Math.min(3, prev + delta)));
+    }
   };
 
   // Try to render DOT content using QuickChart GraphViz API
@@ -188,6 +237,7 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
   };
 
   const exportAsImage = async () => {
+    console.log('Export Image - Platform:', Platform.OS, 'RenderedSvg available:', !!renderedSvg, 'SVG available:', !!svg);
     try {
       if (Platform.OS === 'web' && renderedSvg) {
         // Create a temporary link to download the SVG
@@ -200,21 +250,46 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        Alert.alert('Success', 'Diagram exported as SVG file');
+        
+        // Web-compatible success notification
+        if (typeof window !== 'undefined' && window.alert) {
+          window.alert('✅ Diagram exported successfully as SVG file!');
+        }
+        console.log('✅ Diagram exported as SVG file');
+      } else if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined' && window.alert) {
+          window.alert('❌ No diagram available to export. Please generate a diagram first.');
+        }
+        console.log('❌ No rendered diagram available for export');
       } else {
-        Alert.alert('Export Not Available', 'Image export is only available on web platform with rendered diagrams');
+        // Mobile: Provide better guidance for image saving
+        if (svg || renderedSvg) {
+          Alert.alert(
+            'Save Diagram Image', 
+            'On mobile:\n• Take a screenshot of the diagram\n• Use your browser\'s "Save Page" option\n• Long-press the diagram and select "Save Image"',
+            [{ text: 'Got it' }]
+          );
+        } else {
+          Alert.alert('Export Not Available', 'Image export requires a rendered diagram');
+        }
       }
     } catch (error) {
-      Alert.alert('Export Error', 'Failed to export diagram image');
+      console.error('Export error:', error);
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.alert) {
+        window.alert('❌ Failed to export diagram image. Please try again.');
+      } else {
+        Alert.alert('Export Error', 'Failed to export diagram image');
+      }
     }
   };
 
   const exportAsYaml = async () => {
+    console.log('Export YAML - Platform:', Platform.OS, 'YAML content available:', !!yamlContent);
     try {
       if (Platform.OS === 'web') {
         // Get YAML content from props
         const yaml = getYamlContent();
-        if (yaml) {
+        if (yaml && yaml.trim()) {
           const yamlBlob = new Blob([yaml], { type: 'text/yaml' });
           const url = URL.createObjectURL(yamlBlob);
           const link = document.createElement('a');
@@ -224,21 +299,54 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
-          Alert.alert('Success', 'YAML configuration exported');
+          
+          // Web-compatible success notification
+          if (typeof window !== 'undefined' && window.alert) {
+            window.alert('✅ YAML configuration exported successfully!');
+          }
+          console.log('✅ YAML configuration exported');
         } else {
-          Alert.alert('Export Error', 'No YAML content available to export');
+          if (typeof window !== 'undefined' && window.alert) {
+            window.alert('❌ No YAML content available to export. Please enter some YAML configuration first.');
+          }
+          console.log('❌ No YAML content available for export');
         }
       } else {
-        Alert.alert('Export Not Available', 'File export is only available on web platform');
+        // Mobile: Use share API if available
+        const yaml = getYamlContent();
+        if (yaml && yaml.trim()) {
+          try {
+            await Share.share({
+              message: yaml,
+              title: 'Infrastructure YAML Configuration',
+            });
+            console.log('✅ YAML shared successfully on mobile');
+          } catch (shareError) {
+            console.log('Share cancelled or failed:', shareError);
+            Alert.alert(
+              'Export YAML',
+              'YAML content is available. You can copy the content from the YAML editor in the app.',
+              [{ text: 'OK' }]
+            );
+          }
+        } else {
+          Alert.alert('Export Not Available', 'No YAML content available to export');
+        }
       }
     } catch (error) {
-      Alert.alert('Export Error', 'Failed to export YAML file');
+      console.error('YAML export error:', error);
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.alert) {
+        window.alert('❌ Failed to export YAML file. Please try again.');
+      } else {
+        Alert.alert('Export Error', 'Failed to export YAML file');
+      }
     }
   };
 
   const exportAsDot = async () => {
+    console.log('Export DOT - Platform:', Platform.OS, 'DOT content available:', !!dotContent, 'DOT length:', dotContent?.length || 0);
     try {
-      if (Platform.OS === 'web' && dotContent) {
+      if (Platform.OS === 'web' && dotContent && dotContent.trim()) {
         const dotBlob = new Blob([dotContent], { type: 'text/plain' });
         const url = URL.createObjectURL(dotBlob);
         const link = document.createElement('a');
@@ -248,16 +356,50 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        Alert.alert('Success', 'DOT notation exported');
+        
+        // Web-compatible success notification
+        if (typeof window !== 'undefined' && window.alert) {
+          window.alert('✅ DOT notation exported successfully!');
+        }
+        console.log('✅ DOT notation exported');
+      } else if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined' && window.alert) {
+          window.alert('❌ No DOT content available to export. Please generate a diagram first.');
+        }
+        console.log('❌ No DOT content available for export');
       } else {
-        Alert.alert('Export Error', 'No DOT content available to export');
+        // Mobile: Use share API for DOT content
+        if (dotContent && dotContent.trim()) {
+          try {
+            await Share.share({
+              message: dotContent,
+              title: 'Infrastructure DOT Notation',
+            });
+            console.log('✅ DOT content shared successfully on mobile');
+          } catch (shareError) {
+            console.log('Share cancelled or failed:', shareError);
+            Alert.alert(
+              'Export DOT',
+              'DOT content is available. You can view the DOT output in the app or copy it manually.',
+              [{ text: 'OK' }]
+            );
+          }
+        } else {
+          Alert.alert('Export Error', 'No DOT content available to export');
+        }
       }
     } catch (error) {
-      Alert.alert('Export Error', 'Failed to export DOT file');
+      console.error('DOT export error:', error);
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.alert) {
+        window.alert('❌ Failed to export DOT file. Please try again.');
+      } else {
+        Alert.alert('Export Error', 'Failed to export DOT file');
+      }
     }
   };
 
   const getYamlContent = () => {
+    console.log('Getting YAML content for export:', yamlContent ? `${yamlContent.length} characters` : 'null/undefined');
     return yamlContent;
   };
 
@@ -313,7 +455,7 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>📊 Diagram</Text>
-            <Text style={styles.subtitle}>Visual output - automatically generated from YAML</Text>
+            <Text style={styles.subtitle}>Visual output - automatically generated from YAML • Hold Ctrl + scroll to zoom</Text>
           </View>
           <View style={styles.headerControls}>
             {onMinimizePane && (
@@ -341,13 +483,16 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
         <View style={styles.controlsRow}>
           <View style={styles.controls}>
             <TouchableOpacity style={styles.controlButton} onPress={handleZoomOut}>
-              <Text style={styles.controlButtonText}>-</Text>
+              <Text style={styles.controlButtonText}>−</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.zoomButton} onPress={handleZoomReset}>
               <Text style={styles.zoomButtonText}>{Math.round(zoom * 100)}%</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn}>
               <Text style={styles.controlButtonText}>+</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.resetZoomButton} onPress={handleZoomReset}>
+              <Text style={styles.resetZoomButtonText}>🔄</Text>
             </TouchableOpacity>
           </View>
           
@@ -403,7 +548,12 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
           </TouchableOpacity>
         </View>
         
-        <ScrollView style={styles.scrollView} maximumZoomScale={3} minimumZoomScale={0.2}>
+        <ScrollView 
+          style={styles.scrollView} 
+          maximumZoomScale={3} 
+          minimumZoomScale={0.3}
+          onWheel={handleWheel}
+        >
           <SvgRenderer svgContent={renderedSvg} zoom={zoom} />
         </ScrollView>
       </View>
@@ -604,7 +754,7 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>📊 Diagram</Text>
-            <Text style={styles.subtitle}>Visual output - automatically generated from YAML</Text>
+            <Text style={styles.subtitle}>Visual output - automatically generated from YAML • Pinch to zoom</Text>
           </View>
           <View style={styles.headerControls}>
             {canExpand && onTogglePane && (
@@ -620,14 +770,42 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
           </View>
         </View>
 
+        {/* Mobile Zoom Controls */}
+        <View style={styles.mobileControlsRow}>
+          <View style={styles.mobileControls}>
+            <TouchableOpacity style={styles.mobileControlButton} onPress={handleZoomOut}>
+              <Text style={styles.mobileControlButtonText}>−</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.mobileZoomButton} onPress={handleZoomReset}>
+              <Text style={styles.mobileZoomButtonText}>{Math.round(mobileZoom * 100)}%</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.mobileControlButton} onPress={handleZoomIn}>
+              <Text style={styles.mobileControlButtonText}>+</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.mobileResetZoomButton} onPress={handleZoomReset}>
+              <Text style={styles.mobileResetZoomButtonText}>🔄</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {svg ? (
           <ScrollView
+            ref={scrollViewRef}
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
-            maximumZoomScale={3}
-            minimumZoomScale={0.2}
-            showsHorizontalScrollIndicator
-            showsVerticalScrollIndicator
+            maximumZoomScale={5}
+            minimumZoomScale={0.5}
+            zoomScale={mobileZoom}
+            bouncesZoom={true}
+            showsHorizontalScrollIndicator={true}
+            showsVerticalScrollIndicator={true}
+            scrollEventThrottle={16}
+            pinchGestureEnabled={true}
+            onScroll={(event: any) => {
+              if (event.nativeEvent.zoomScale) {
+                setMobileZoom(event.nativeEvent.zoomScale);
+              }
+            }}
           >
             <MobileSvgRenderer svgContent={svg} />
           </ScrollView>
@@ -652,7 +830,9 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
           <View style={styles.exportModal}>
             <Text style={styles.exportModalTitle}>📤 Export Options</Text>
             <Text style={styles.exportModalSubtitle}>
-              Choose what you'd like to export:
+              {Platform.OS === 'web' 
+                ? 'Choose what you\'d like to download:' 
+                : 'Choose what you\'d like to share or save:'}
             </Text>
             
             <View style={styles.exportOptions}>
@@ -667,7 +847,9 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
                 <View style={styles.exportOptionContent}>
                   <Text style={styles.exportOptionTitle}>Diagram Image</Text>
                   <Text style={styles.exportOptionDescription}>
-                    Download the visual diagram as SVG file
+                    {Platform.OS === 'web' 
+                      ? 'Download the visual diagram as SVG file' 
+                      : 'Save diagram image (screenshot recommended)'}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -683,7 +865,9 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
                 <View style={styles.exportOptionContent}>
                   <Text style={styles.exportOptionTitle}>YAML Configuration</Text>
                   <Text style={styles.exportOptionDescription}>
-                    Download the infrastructure config as YAML file
+                    {Platform.OS === 'web' 
+                      ? 'Download the infrastructure config as YAML file' 
+                      : 'Share or copy the YAML configuration'}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -699,7 +883,9 @@ export default function DiagramViewer({ svg, dotContent, yamlContent, style, onT
                 <View style={styles.exportOptionContent}>
                   <Text style={styles.exportOptionTitle}>DOT Notation</Text>
                   <Text style={styles.exportOptionDescription}>
-                    Download the GraphViz DOT source code
+                    {Platform.OS === 'web' 
+                      ? 'Download the GraphViz DOT source code' 
+                      : 'Share or copy the DOT notation code'}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -1067,5 +1253,83 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontSize: 16,
     fontWeight: '500',
+  },
+  // New zoom control styles
+  resetZoomButton: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#10b981',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  resetZoomButtonText: {
+    fontSize: 16,
+    color: 'white',
+  },
+  // Mobile zoom control styles
+  mobileControlsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#f9fafb',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  mobileControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  mobileControlButton: {
+    width: 36,
+    height: 36,
+    backgroundColor: '#3b82f6',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 2,
+  },
+  mobileControlButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  mobileZoomButton: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  mobileZoomButtonText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  mobileResetZoomButton: {
+    width: 36,
+    height: 36,
+    backgroundColor: '#10b981',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  mobileResetZoomButtonText: {
+    fontSize: 18,
+    color: 'white',
   },
 }); 

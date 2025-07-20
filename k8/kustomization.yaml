@@ -11,6 +11,8 @@ resources:
 - ingress.yaml
 - hpa.yaml
 
-commonLabels:
-  app: gorph
-  version: v1.0.0 
+labels:
+- includeSelectors: true
+  pairs:
+    app: gorph
+    version: v1.0.0 

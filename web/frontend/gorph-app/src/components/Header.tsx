@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Linking, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ValidationIcon from './ValidationIcon';
 import { ideTheme } from '../theme/ideTheme';
@@ -33,6 +33,19 @@ export default function Header({
   validationStates, 
   validationErrors 
 }: HeaderProps) {
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+
+  // Track screen width for responsive layout
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription?.remove();
+  }, []);
+
+  // Determine if we should use compact layout for narrow screens
+  const isNarrowScreen = screenWidth < 400;
+  const isVeryNarrowScreen = screenWidth < 350;
   const handleSourceCodePress = () => {
     Linking.openURL('https://github.com/imran31415/gorph');
   };
@@ -51,14 +64,19 @@ export default function Header({
             activeOpacity={0.7}
           >
             <View style={styles.tabContent}>
-              <Text style={[styles.tabText, activeTab === 'yaml' && styles.activeTabText]}>
+              <Text style={[
+                styles.tabText, 
+                activeTab === 'yaml' && styles.activeTabText,
+                isNarrowScreen && styles.tabTextNarrow,
+                isVeryNarrowScreen && styles.tabTextVeryNarrow
+              ]}>
                 YAML
               </Text>
               {validationStates && (
                 <ValidationIcon
                   status={validationStates.yaml}
                   errorMessage={validationErrors?.yaml}
-                  size={14}
+                  size={isVeryNarrowScreen ? 10 : 14}
                 />
               )}
             </View>
@@ -70,14 +88,19 @@ export default function Header({
             activeOpacity={0.7}
           >
             <View style={styles.tabContent}>
-              <Text style={[styles.tabText, activeTab === 'dot' && styles.activeTabText]}>
+              <Text style={[
+                styles.tabText, 
+                activeTab === 'dot' && styles.activeTabText,
+                isNarrowScreen && styles.tabTextNarrow,
+                isVeryNarrowScreen && styles.tabTextVeryNarrow
+              ]}>
                 DOT
               </Text>
               {validationStates && (
                 <ValidationIcon
                   status={validationStates.dot}
                   errorMessage={validationErrors?.dot}
-                  size={14}
+                  size={isVeryNarrowScreen ? 10 : 14}
                 />
               )}
             </View>
@@ -89,14 +112,19 @@ export default function Header({
             activeOpacity={0.7}
           >
             <View style={styles.tabContent}>
-              <Text style={[styles.tabText, activeTab === 'diagram' && styles.activeTabText]}>
+              <Text style={[
+                styles.tabText, 
+                activeTab === 'diagram' && styles.activeTabText,
+                isNarrowScreen && styles.tabTextNarrow,
+                isVeryNarrowScreen && styles.tabTextVeryNarrow
+              ]}>
                 DIAGRAM
               </Text>
               {validationStates && (
                 <ValidationIcon
                   status={validationStates.diagram}
                   errorMessage={validationErrors?.diagram}
-                  size={14}
+                  size={isVeryNarrowScreen ? 10 : 14}
                 />
               )}
             </View>
@@ -108,14 +136,19 @@ export default function Header({
             activeOpacity={0.7}
           >
             <View style={styles.tabContent}>
-              <Text style={[styles.tabText, activeTab === 'builder' && styles.activeTabText]}>
+              <Text style={[
+                styles.tabText, 
+                activeTab === 'builder' && styles.activeTabText,
+                isNarrowScreen && styles.tabTextNarrow,
+                isVeryNarrowScreen && styles.tabTextVeryNarrow
+              ]}>
                 BUILDER
               </Text>
               {validationStates && (
                 <ValidationIcon
                   status={validationStates.builder}
                   errorMessage={validationErrors?.builder}
-                  size={14}
+                  size={isVeryNarrowScreen ? 10 : 14}
                 />
               )}
             </View>
@@ -129,8 +162,8 @@ export default function Header({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#f8fafc',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
@@ -150,8 +183,8 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 8,
-    marginHorizontal: 2,
+    paddingHorizontal: 6,
+    marginHorizontal: 1,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -165,7 +198,7 @@ const styles = StyleSheet.create({
   tabContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   activeTab: {
     backgroundColor: '#2563eb',
@@ -187,5 +220,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: ideTheme.fonts.system,
     letterSpacing: 0.5,
+  },
+  tabTextNarrow: {
+    fontSize: ideTheme.typography.small.fontSize - 1,
+    letterSpacing: 0.3,
+  },
+  tabTextVeryNarrow: {
+    fontSize: ideTheme.typography.small.fontSize - 2,
+    letterSpacing: 0.2,
   },
 }); 
