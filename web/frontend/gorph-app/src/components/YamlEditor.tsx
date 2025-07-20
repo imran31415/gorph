@@ -324,7 +324,7 @@ connections:
             onChange={onChange}
             isMobile={isMobile}
             isVeryNarrow={isVeryNarrow}
-            height={isVeryNarrow ? screenData.height * 0.4 : isMobile ? screenData.height * 0.5 : 400}
+            height={isVeryNarrow ? screenData.height * 0.6 : isMobile ? screenData.height * 0.7 : 400}
           />
         )}
       </View>
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   },
   veryNarrowEditorContainer: {
     flex: 1,
-    minHeight: 10, // Take up most of the screen on very narrow displays
+    minHeight: 300, // Ensure adequate space for editing on very narrow displays
   },
   textInput: {
     flex: 1,

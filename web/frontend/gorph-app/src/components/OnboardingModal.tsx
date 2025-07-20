@@ -6,9 +6,10 @@ interface OnboardingModalProps {
   onClose: () => void;
   templates: Record<string, any>;
   onSelectTemplate: (template: any) => void;
+  onAIGenerate?: () => void;
 }
 
-export default function OnboardingModal({ visible, onClose, templates, onSelectTemplate }: OnboardingModalProps) {
+export default function OnboardingModal({ visible, onClose, templates, onSelectTemplate, onAIGenerate }: OnboardingModalProps) {
   const [currentStep, setCurrentStep] = useState<'welcome' | 'how-it-works' | 'templates'>('welcome');
   const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
 
@@ -194,15 +195,37 @@ export default function OnboardingModal({ visible, onClose, templates, onSelectT
   );
 
   const renderTemplatesStep = () => (
-    <View style={styles.stepContent}>
-      <View style={styles.stepHeader}>
+    <View style={[styles.stepContent, isMobile && styles.stepContentMobileTemplates]}>
+      <View style={[styles.stepHeader, isMobile && styles.stepHeaderMobileTemplates]}>
         <Text style={styles.stepTitle}>🎯 Choose Your Starting Point</Text>
         <Text style={styles.stepSubtitle}>
-          Select a template to get started quickly, or start with a blank slate
+          Generate with AI, select a template, or start with a blank slate
         </Text>
       </View>
 
-      <ScrollView style={styles.templatesContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.templatesContainer, isMobile && styles.templatesContainerMobile]} showsVerticalScrollIndicator={false}>
+        {/* AI Generate Option */}
+        {onAIGenerate && (
+          <TouchableOpacity
+            style={[styles.templateCard, styles.aiTemplateCard]}
+            onPress={() => {
+              onAIGenerate();
+              onClose();
+            }}
+          >
+            <View style={styles.templateHeader}>
+              <Text style={styles.templateIcon}>🤖</Text>
+              <View style={styles.templateInfo}>
+                <Text style={styles.templateName}>AI Generate</Text>
+                <Text style={styles.templateDescription}>
+                  Describe your system in natural language and let AI create the diagram
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.templateAction}>Generate with AI →</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Blank Template Option */}
         <TouchableOpacity
           style={[styles.templateCard, styles.blankTemplateCard]}
@@ -248,7 +271,7 @@ export default function OnboardingModal({ visible, onClose, templates, onSelectT
         ))}
       </ScrollView>
       
-      <View style={styles.stepButtons}>
+      <View style={[styles.stepButtons, isMobile && styles.stepButtonsMobileTemplates]}>
         <TouchableOpacity
           style={styles.secondaryButton}
           onPress={() => setCurrentStep('how-it-works')}
@@ -276,6 +299,7 @@ export default function OnboardingModal({ visible, onClose, templates, onSelectT
         <View style={[
           styles.modalContainer,
           isMobile && styles.modalContainerMobile,
+          isMobile && currentStep === 'templates' && styles.modalContainerMobileTemplates,
           isVeryShortScreen && styles.modalContainerShort
         ]}>
           {/* Progress Indicator */}
@@ -329,6 +353,12 @@ const styles = StyleSheet.create({
     maxWidth: '96%',
     maxHeight: '82%',
   },
+  modalContainerMobileTemplates: {
+    margin: 8,
+    maxWidth: '98%',
+    maxHeight: '92%',
+    height: '92%',
+  },
   modalContainerShort: {
     maxHeight: '78%',
   },
@@ -358,6 +388,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 0,
     overflow: 'auto',
+  },
+  stepContentMobileTemplates: {
+    padding: 16,
+    paddingBottom: 8,
   },
   welcomeScrollContent: {
     flex: 1,
@@ -415,6 +449,10 @@ const styles = StyleSheet.create({
   stepHeader: {
     alignItems: 'center',
     marginBottom: 24,
+  },
+  stepHeaderMobileTemplates: {
+    marginBottom: 16,
+    paddingHorizontal: 8,
   },
   stepTitle: {
     fontSize: 24,
@@ -499,6 +537,11 @@ const styles = StyleSheet.create({
     flex: 1,
     marginBottom: 24,
   },
+  templatesContainerMobile: {
+    flex: 1,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
   templateCard: {
     backgroundColor: '#f9fafb',
     borderWidth: 1,
@@ -510,6 +553,11 @@ const styles = StyleSheet.create({
   blankTemplateCard: {
     backgroundColor: '#eff6ff',
     borderColor: '#bfdbfe',
+  },
+  aiTemplateCard: {
+    backgroundColor: '#f3f1ff',
+    borderColor: '#d1c4e9',
+    borderWidth: 2,
   },
   templateHeader: {
     flexDirection: 'row',
@@ -546,6 +594,10 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 20,
     flexShrink: 0,
+  },
+  stepButtonsMobileTemplates: {
+    marginTop: 12,
+    paddingHorizontal: 8,
   },
   primaryButton: {
     flex: 1,

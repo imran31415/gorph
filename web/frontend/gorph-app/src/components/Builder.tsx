@@ -12,6 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DiagramViewer from './DiagramViewer';
 import SuccessTooltip from './SuccessTooltip';
+import LLMGenerator from './LLMGenerator';
 import { ideTheme } from '../theme/ideTheme';
 
 // YAML Schema constants
@@ -92,6 +93,7 @@ export default function Builder({ yamlContent, onYamlChange, svgOutput, dotOutpu
     message: '',
   });
   const [activeTab, setActiveTab] = useState<'entities' | 'connections'>('entities'); // Tab state
+  const [showLLMGenerator, setShowLLMGenerator] = useState(false);
   
   // Debug: Log when Builder component mounts and props change
   useEffect(() => {
@@ -186,6 +188,26 @@ export default function Builder({ yamlContent, onYamlChange, svgOutput, dotOutpu
       console.log('Builder: Skipping YAML update (no change)');
     }
   }, [entities, connections, onYamlChange, lastGeneratedYaml, yamlContent]);
+
+  // Handle LLM-generated YAML
+  const handleLLMYamlGenerated = (generatedYaml: string) => {
+    console.log('Builder: Received LLM-generated YAML');
+    try {
+      const parsed = parseYaml(generatedYaml);
+      setEntities(parsed.entities || []);
+      setConnections(parsed.connections || []);
+      
+      // Update the YAML content directly
+      setLastGeneratedYaml(generatedYaml);
+      onYamlChange(generatedYaml);
+      
+      showSuccessTooltip('AI-generated infrastructure diagram loaded successfully! 🤖✨');
+      setShowLLMGenerator(false);
+    } catch (error) {
+      console.error('Failed to parse LLM-generated YAML:', error);
+      Alert.alert('Error', 'Failed to parse the AI-generated YAML. Please try again or refine your description.');
+    }
+  };
 
   const parseYaml = (yaml: string) => {
     // Enhanced YAML parser for better structure handling
@@ -569,7 +591,6 @@ export default function Builder({ yamlContent, onYamlChange, svgOutput, dotOutpu
           <Text style={styles.title}>🎛️ Infrastructure Builder</Text>
         </View>
         <View style={styles.headerControls}>
-
           {onMinimizePane && (
             <TouchableOpacity
               style={styles.minimizeButton}
@@ -644,6 +665,13 @@ export default function Builder({ yamlContent, onYamlChange, svgOutput, dotOutpu
             >
               <Text style={styles.controlButtonIcon}>📋</Text>
               <Text style={styles.controlButtonText}>Create From Template</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.controlButton, styles.aiCreateButton]}
+              onPress={() => setShowLLMGenerator(true)}
+            >
+              <Text style={styles.controlButtonIcon}>🤖</Text>
+              <Text style={styles.controlButtonText}>Create with AI</Text>
             </TouchableOpacity>
           </View>
           {entities.length < 2 && (
@@ -880,6 +908,13 @@ export default function Builder({ yamlContent, onYamlChange, svgOutput, dotOutpu
         message={tooltip.message}
         onUndo={tooltip.onUndo}
         onClose={() => setTooltip({ visible: false, message: '' })}
+      />
+
+      {/* LLM Generator Modal */}
+      <LLMGenerator
+        visible={showLLMGenerator}
+        onYamlGenerated={handleLLMYamlGenerated}
+        onClose={() => setShowLLMGenerator(false)}
       />
     </View>
   );
@@ -2128,10 +2163,14 @@ const styles = StyleSheet.create({
   templateButton: {
     backgroundColor: '#8b5cf6',
   },
+  aiCreateButton: {
+    backgroundColor: '#4f46e5',
+  },
   controlPanelHint: {
     fontSize: 12,
     color: '#6b7280',
     marginTop: 8,
     textAlign: 'center',
   },
+
 }); 

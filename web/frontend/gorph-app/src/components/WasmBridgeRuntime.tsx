@@ -28,13 +28,27 @@ const WasmBridgeRuntime = forwardRef<WasmBridgeRef, WasmBridgeProps>((props, ref
       try {
         console.log('Runtime Bridge: Loading WASM file in React Native...');
         
-        // Try different URLs for the Expo dev server
-        const possibleUrls = [
-          'http://localhost:8081/gorph.wasm',
-          'http://192.168.86.127:8081/gorph.wasm',
-          'http://localhost:8082/gorph.wasm', // fallback port
-          'http://192.168.86.127:8082/gorph.wasm'
-        ];
+        // Get base URL dynamically based on environment
+        const getBaseUrls = () => {
+          const hostname = window.location?.hostname || 'localhost';
+          
+          // Production check: if we're on a real domain, use it
+          if (hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.startsWith('192.168') && !hostname.startsWith('10.0')) {
+            const protocol = window.location?.protocol || 'https:';
+            const host = window.location?.host || hostname;
+            return [`${protocol}//${host}/gorph.wasm`];
+          }
+          
+          // Development: try multiple Expo dev server URLs
+          return [
+            'http://localhost:8081/gorph.wasm',
+            'http://192.168.86.127:8081/gorph.wasm',
+            'http://localhost:8082/gorph.wasm', // fallback port
+            'http://192.168.86.127:8082/gorph.wasm'
+          ];
+        };
+        
+        const possibleUrls = getBaseUrls();
         
         let arrayBuffer = null;
         let successUrl = null;

@@ -18,6 +18,7 @@ import DiagramHeader from './src/components/DiagramHeader';
 import HistoryViewer from './src/components/HistoryViewer';
 import OnboardingModal from './src/components/OnboardingModal';
 import TemplateModal from './src/components/TemplateModal';
+import LLMGenerator from './src/components/LLMGenerator';
 
 // WASM interface types
 interface WasmResult {
@@ -54,6 +55,7 @@ function AppInner() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isFirstTime, setIsFirstTime] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showLLMGenerator, setShowLLMGenerator] = useState(false);
   const templateModalStateRef = useRef(false);
   
   // Sync ref with state
@@ -537,6 +539,16 @@ connections:
     const previousYaml = yamlInput;
     setYamlInput(template.yaml, 'template', `Template "${template.name}" applied`);
     setShowTemplateModal(false);
+    
+    // Switch to diagram tab to show the result
+    setActiveTab('diagram');
+  };
+
+  // Handle LLM-generated YAML
+  const handleLLMYamlGenerated = (generatedYaml: string) => {
+    console.log('🤖 LLM YAML generated');
+    setYamlInput(generatedYaml, 'template', 'Generated with AI');
+    setShowLLMGenerator(false);
     
     // Switch to diagram tab to show the result
     setActiveTab('diagram');
@@ -1036,6 +1048,10 @@ connections:
               console.log('📋 App.tsx: Mobile DiagramHeader onTemplatePress called - setShowTemplateModal(true)');
               setShowTemplateModal(true);
             }}
+            onAIGeneratePress={() => {
+              console.log('🤖 App.tsx: Mobile DiagramHeader onAIGeneratePress called - setShowLLMGenerator(true)');
+              setShowLLMGenerator(true);
+            }}
           />
         <Header 
           activeTab={activeTab}
@@ -1118,6 +1134,11 @@ connections:
           onClose={handleOnboardingSkip}
           templates={templates}
           onSelectTemplate={handleOnboardingComplete}
+          onAIGenerate={() => {
+            console.log('🤖 App.tsx: Onboarding AI Generate selected');
+            setShowOnboarding(false);
+            setShowLLMGenerator(true);
+          }}
         />
 
         
@@ -1134,6 +1155,16 @@ connections:
           templates={templates}
           onSelectTemplate={handleTemplateSelect}
         />
+        
+        {/* Render LLMGenerator outside container for mobile */}
+        <LLMGenerator
+          visible={showLLMGenerator}
+          onYamlGenerated={handleLLMYamlGenerated}
+          onClose={() => {
+            console.log('🤖 App.tsx: LLMGenerator onClose called');
+            setShowLLMGenerator(false);
+          }}
+        />
       </>
     );
   }
@@ -1146,6 +1177,10 @@ connections:
       <DiagramHeader 
         onShowHistory={() => setShowHistory(true)} 
         onTemplatePress={() => setShowTemplateModal(true)}
+        onAIGeneratePress={() => {
+          console.log('🤖 App.tsx: Desktop DiagramHeader onAIGeneratePress called - setShowLLMGenerator(true)');
+          setShowLLMGenerator(true);
+        }}
       />
       <Header 
         activeTab={activeTab}
@@ -1350,6 +1385,11 @@ connections:
         onClose={handleOnboardingSkip}
         templates={templates}
         onSelectTemplate={handleOnboardingComplete}
+        onAIGenerate={() => {
+          console.log('🤖 App.tsx: Onboarding AI Generate selected');
+          setShowOnboarding(false);
+          setShowLLMGenerator(true);
+        }}
       />
       
       <Footer />
@@ -1364,6 +1404,16 @@ connections:
         }}
         templates={templates}
         onSelectTemplate={handleTemplateSelect}
+      />
+      
+      {/* Render LLMGenerator outside container for desktop */}
+      <LLMGenerator
+        visible={showLLMGenerator}
+        onYamlGenerated={handleLLMYamlGenerated}
+        onClose={() => {
+          console.log('🤖 App.tsx: LLMGenerator onClose called');
+          setShowLLMGenerator(false);
+        }}
       />
     </>
   );

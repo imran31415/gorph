@@ -15,9 +15,10 @@ import { ideTheme } from '../theme/ideTheme';
 interface DiagramHeaderProps {
   onShowHistory: () => void;
   onTemplatePress?: () => void;
+  onAIGeneratePress?: () => void;
 }
 
-export default function DiagramHeader({ onShowHistory, onTemplatePress }: DiagramHeaderProps) {
+export default function DiagramHeader({ onShowHistory, onTemplatePress, onAIGeneratePress }: DiagramHeaderProps) {
   const {
     activeDiagram,
     session,
@@ -140,6 +141,32 @@ export default function DiagramHeader({ onShowHistory, onTemplatePress }: Diagra
             <Text style={styles.templatesIcon}>📋</Text>
             {!isSmallScreen && (
               <Text style={styles.templatesText}>Templates</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* AI Generate Button */}
+        {onAIGeneratePress && (
+          <TouchableOpacity
+            style={[
+              styles.controlButton, 
+              styles.aiGenerateButton,
+              isSmallScreen && styles.aiGenerateButtonCompact
+            ]}
+            onPress={() => {
+              console.log('🤖 DiagramHeader: AI Generate button clicked!');
+              if (onAIGeneratePress) {
+                console.log('🤖 DiagramHeader: Calling onAIGeneratePress...');
+                onAIGeneratePress();
+                console.log('🤖 DiagramHeader: onAIGeneratePress called successfully');
+              } else {
+                console.error('🤖 DiagramHeader: onAIGeneratePress is null/undefined!');
+              }
+            }}
+          >
+            <Text style={styles.aiGenerateIcon}>🤖</Text>
+            {!isSmallScreen && (
+              <Text style={styles.aiGenerateText}>AI Generate</Text>
             )}
           </TouchableOpacity>
         )}
@@ -828,6 +855,41 @@ const styles = StyleSheet.create({
   templatesText: {
     fontSize: 12,
     color: '#1d4ed8',
+    fontWeight: '600',
+    fontFamily: ideTheme.fonts.system,
+  },
+  aiGenerateButton: {
+    backgroundColor: '#ddd6fe',
+    borderColor: '#a78bfa',
+    shadowColor: '#7c3aed',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    minWidth: 90,
+    maxWidth: 140,
+    justifyContent: 'center',
+    flexShrink: 1,
+    overflow: 'hidden',
+  },
+  aiGenerateButtonCompact: {
+    minWidth: 44,
+    maxWidth: 44,
+    paddingHorizontal: 0,
+    width: 44,
+    flexShrink: 0,
+  },
+  aiGenerateIcon: {
+    fontSize: 16,
+    color: '#6d28d9',
+  },
+  aiGenerateText: {
+    fontSize: 12,
+    color: '#6d28d9',
     fontWeight: '600',
     fontFamily: ideTheme.fonts.system,
   },

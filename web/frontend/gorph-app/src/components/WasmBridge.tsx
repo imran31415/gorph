@@ -119,10 +119,19 @@ const WasmBridge = forwardRef<WasmBridgeRef, WasmBridgeProps>((props, ref) => {
             try {
               console.log('WebView: Loading WASM...');
               
-              // Get proper base URL for Expo dev server
+              // Get proper base URL - dynamic based on environment
               const getBaseUrl = () => {
-                // For Expo WebView, we need to use the actual dev server URL
-                const host = window.location.hostname || '192.168.86.127'; // Use detected IP or fallback
+                const hostname = window.location.hostname;
+                
+                // Production check: if we're on a real domain, use it
+                if (hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.startsWith('192.168') && !hostname.startsWith('10.0')) {
+                  const baseUrl = \`\${window.location.protocol}//\${window.location.host}\`;
+                  console.log('WebView: Using production URL:', baseUrl);
+                  return baseUrl;
+                }
+                
+                // Development: use Expo dev server
+                const host = hostname || '192.168.86.127'; // Use detected IP or fallback
                 const port = '8081'; // Expo dev server port
                 const baseUrl = \`http://\${host}:\${port}\`;
                 console.log('WebView: Using Expo dev server URL:', baseUrl);
